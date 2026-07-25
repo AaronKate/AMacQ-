@@ -659,24 +659,24 @@ function Start-Gui {
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
-    <Border Name="TitleBar" Grid.Row="0" BorderBrush="#4A3A70" BorderThickness="0,0,0,1">
-      <Border.Background>
-        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-          <GradientStop Color="#26345E" Offset="0"/>
-          <GradientStop Color="#182243" Offset="1"/>
-        </LinearGradientBrush>
-      </Border.Background>
-      <Grid>
+    <Grid Name="TitleBar" Grid.Row="0">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="220"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <Border Background="{StaticResource PurpleSidebarBrush}">
         <TextBlock Text="AMacQ Configuration Editor" Margin="14,0,0,0"
                    VerticalAlignment="Center" FontSize="13" Foreground="#F7F2FF"/>
+      </Border>
+
+      <Border Grid.Column="1" Background="{StaticResource PurpleContentBrush}">
         <StackPanel HorizontalAlignment="Right" Orientation="Horizontal"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True">
-          <Button Name="MinimizeBtn" Content="&#xE921;" Style="{StaticResource TitleBarButton}"/>
-          <Button Name="MaximizeBtn" Content="&#xE922;" Style="{StaticResource TitleBarButton}"/>
           <Button Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource CloseTitleBarButton}"/>
         </StackPanel>
-      </Grid>
-    </Border>
+      </Border>
+    </Grid>
 
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
@@ -822,12 +822,7 @@ function Start-Gui {
     $window = [Windows.Markup.XamlReader]::Parse($xaml)
 
     # Controls
-    $minimizeBtn = $window.FindName('MinimizeBtn')
-    $maximizeBtn = $window.FindName('MaximizeBtn')
     $closeBtn = $window.FindName('CloseBtn')
-    $updateMaximizeButton = {
-        $maximizeBtn.Content = if ($window.WindowState -eq [Windows.WindowState]::Maximized) { [char]0xE923 } else { [char]0xE922 }
-    }
     $sidebarPanel = $window.FindName('SidebarPanel')
     $contentPanel = $window.FindName('ContentPanel')
     Start-AnimatedBackground $window $sidebarPanel $contentPanel
@@ -1024,21 +1019,9 @@ function Start-Gui {
     }
 
     # Wire events
-    $minimizeBtn.Add_Click({
-        $window.WindowState = [Windows.WindowState]::Minimized
-    })
-    $maximizeBtn.Add_Click({
-        $window.WindowState = if ($window.WindowState -eq [Windows.WindowState]::Maximized) {
-            [Windows.WindowState]::Normal
-        } else {
-            [Windows.WindowState]::Maximized
-        }
-    })
     $closeBtn.Add_Click({
         $window.Close()
     })
-    $window.Add_StateChanged($updateMaximizeButton)
-    & $updateMaximizeButton
 
     $refreshBtn.Add_Click($reloadSelectedFiles)
     $browseBtn.Add_Click($selectConfigFiles)
