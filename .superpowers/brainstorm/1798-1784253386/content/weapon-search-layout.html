@@ -1,0 +1,35 @@
+<h2>枪械列表搜索栏放置</h2>
+<p class="subtitle">请选择最符合你使用习惯的布局。搜索默认支持即时筛选，清空后恢复完整列表。</p>
+
+<div class="cards">
+  <div class="card" data-choice="above-title" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">左侧栏</div>
+        <div class="mockup-body" style="padding:16px; font-size:13px; color:#1d1d1f;">
+          <div style="font-weight:600; margin-bottom:8px;">鼠标型号</div>
+          <div class="mock-input" style="margin-bottom:16px; padding:8px; border:1px solid #d2d2d7; border-radius:6px;">G502 X</div>
+          <div style="font-weight:600; margin-bottom:8px;">枪械</div>
+          <div class="mock-input" style="padding:8px; border:1px solid #d2d2d7; border-radius:6px; margin-bottom:8px; color:#86868b;">🔍 搜索枪械</div>
+          <div style="line-height:1.9; padding-left:8px;">M4A1<br>AK-47<br>MP5<br>AWP</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A · 标题下方</h3><p>搜索框位于“枪械”标题正下方，列表正上方；结构清晰，我推荐此方案。</p></div>
+  </div>
+
+  <div class="card" data-choice="inline-title" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">左侧栏</div>
+        <div class="mockup-body" style="padding:16px; font-size:13px; color:#1d1d1f;">
+          <div style="font-weight:600; margin-bottom:8px;">鼠标型号</div>
+          <div class="mock-input" style="margin-bottom:16px; padding:8px; border:1px solid #d2d2d7; border-radius:6px;">G502 X</div>
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;"><div style="font-weight:600;">枪械</div><div style="flex:1; padding:6px; border:1px solid #d2d2d7; border-radius:6px; color:#86868b;">🔍 搜索</div></div>
+          <div style="line-height:1.9; padding-left:8px;">M4A1<br>AK-47<br>MP5<br>AWP</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B · 与标题同一行</h3><p>更节省垂直空间，但窄窗口下输入框会显得局促。</p></div>
+  </div>
+</div>

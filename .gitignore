@@ -1,0 +1,14 @@
+# ZCode local working files
+.zcode/
+
+# PowerShell temporary files
+*.tmp
+*.writing.*
+
+# Editor and system files
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
