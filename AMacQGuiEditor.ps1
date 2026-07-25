@@ -209,43 +209,6 @@ function Read-AMacQConfig {
     $model
 }
 
-function Set-DarkTitleBar {
-    param([Windows.Window]$Window)
-
-    if (!$Window) { return }
-    try {
-        if (!('AMacQ.NativeMethods' -as [type])) {
-            Add-Type @'
-using System;
-using System.Runtime.InteropServices;
-namespace AMacQ {
-    public static class NativeMethods {
-        [DllImport("dwmapi.dll", PreserveSig = true)]
-        public static extern int DwmSetWindowAttribute(
-            IntPtr hwnd,
-            int dwAttribute,
-            ref int pvAttribute,
-            int cbAttribute);
-    }
-}
-'@
-        }
-
-        $handle = [Windows.Interop.WindowInteropHelper]::new($Window).Handle
-        if ($handle -eq [IntPtr]::Zero) { return }
-
-        $enabled = 1
-        $size = [Runtime.InteropServices.Marshal]::SizeOf(0)
-        foreach ($attribute in 20, 19) {
-            if ([AMacQ.NativeMethods]::DwmSetWindowAttribute($handle, $attribute, [ref]$enabled, $size) -eq 0) {
-                return
-            }
-        }
-    } catch {
-        # Unsupported Windows versions retain the system title bar.
-    }
-}
-
 function Start-AnimatedBackground {
     param(
         [Windows.Window]$Window,
@@ -419,9 +382,14 @@ function Start-Gui {
 	    $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="AMacQ Configuration Editor" Height="600" Width="860"
         MinHeight="520" MinWidth="760" WindowStartupLocation="CenterScreen"
+        WindowStyle="None" ResizeMode="CanResize"
         Background="#20193D" Foreground="#F7F2FF" FontFamily="Segoe UI">
+  <shell:WindowChrome.WindowChrome>
+    <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+  </shell:WindowChrome.WindowChrome>
   <Window.Resources>
     <LinearGradientBrush x:Key="PurpleSidebarBrush" StartPoint="0,0" EndPoint="0,1">
       <GradientStop Color="#26345E" Offset="0"/>
@@ -631,6 +599,39 @@ function Start-Gui {
         </Setter.Value>
       </Setter>
     </Style>
+    <Style x:Key="TitleBarButton" TargetType="Button">
+      <Setter Property="Width" Value="46"/>
+      <Setter Property="Height" Value="38"/>
+      <Setter Property="Foreground" Value="#EDE7FF"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="bd" Background="{TemplateBinding Background}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="#3856B8"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="bd" Property="Background" Value="#2A4FAD"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="CloseTitleBarButton" TargetType="Button" BasedOn="{StaticResource TitleBarButton}">
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="#C42B4B"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
     <Style x:Key="PrimaryButton" TargetType="Button">
       <Setter Property="Template">
         <Setter.Value>
@@ -653,10 +654,35 @@ function Start-Gui {
     </Style>
   </Window.Resources>
   <Grid>
-    <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="220"/>
-      <ColumnDefinition Width="*"/>
-    </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="38"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <Border Name="TitleBar" Grid.Row="0" BorderBrush="#4A3A70" BorderThickness="0,0,0,1">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+          <GradientStop Color="#26345E" Offset="0"/>
+          <GradientStop Color="#182243" Offset="1"/>
+        </LinearGradientBrush>
+      </Border.Background>
+      <Grid>
+        <TextBlock Text="AMacQ Configuration Editor" Margin="14,0,0,0"
+                   VerticalAlignment="Center" FontSize="13" Foreground="#F7F2FF"/>
+        <StackPanel HorizontalAlignment="Right" Orientation="Horizontal"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+          <Button Name="MinimizeBtn" Content="&#xE921;" Style="{StaticResource TitleBarButton}"/>
+          <Button Name="MaximizeBtn" Content="&#xE922;" Style="{StaticResource TitleBarButton}"/>
+          <Button Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource CloseTitleBarButton}"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="220"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
 
     <!-- macOS System Settings-style navigation sidebar -->
     <Border Name="SidebarPanel" Grid.Column="0" Background="{StaticResource PurpleSidebarBrush}"
@@ -789,15 +815,19 @@ function Start-Gui {
         </Border.Background>
       </Border>
     </Grid>
+    </Grid>
   </Grid>
 </Window>
 '@
     $window = [Windows.Markup.XamlReader]::Parse($xaml)
-    $window.Add_SourceInitialized({
-        Set-DarkTitleBar $this
-    })
 
     # Controls
+    $minimizeBtn = $window.FindName('MinimizeBtn')
+    $maximizeBtn = $window.FindName('MaximizeBtn')
+    $closeBtn = $window.FindName('CloseBtn')
+    $updateMaximizeButton = {
+        $maximizeBtn.Content = if ($window.WindowState -eq [Windows.WindowState]::Maximized) { [char]0xE923 } else { [char]0xE922 }
+    }
     $sidebarPanel = $window.FindName('SidebarPanel')
     $contentPanel = $window.FindName('ContentPanel')
     Start-AnimatedBackground $window $sidebarPanel $contentPanel
@@ -994,6 +1024,22 @@ function Start-Gui {
     }
 
     # Wire events
+    $minimizeBtn.Add_Click({
+        $window.WindowState = [Windows.WindowState]::Minimized
+    })
+    $maximizeBtn.Add_Click({
+        $window.WindowState = if ($window.WindowState -eq [Windows.WindowState]::Maximized) {
+            [Windows.WindowState]::Normal
+        } else {
+            [Windows.WindowState]::Maximized
+        }
+    })
+    $closeBtn.Add_Click({
+        $window.Close()
+    })
+    $window.Add_StateChanged($updateMaximizeButton)
+    & $updateMaximizeButton
+
     $refreshBtn.Add_Click($reloadSelectedFiles)
     $browseBtn.Add_Click($selectConfigFiles)
     $mouseModelList.Add_SelectionChanged($refreshMouseProfile)
