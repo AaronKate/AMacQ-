@@ -211,21 +211,14 @@ function Read-AMacQConfig {
 
 function Start-AnimatedBackground {
     param(
-        [Windows.Window]$Window,
-        [Windows.Controls.Border]$SidebarPanel,
-        [Windows.Controls.Grid]$ContentPanel
+        [Windows.Window]$Window
     )
 
-    $sidebarBrush = [Windows.Media.LinearGradientBrush]$SidebarPanel.Background.Clone()
-    $contentBrush = [Windows.Media.LinearGradientBrush]$ContentPanel.Background.Clone()
-    $SidebarPanel.Background = $sidebarBrush
-    $ContentPanel.Background = $contentBrush
+    $appBackgroundBrush = [Windows.Media.LinearGradientBrush]$Window.Resources['AppBackgroundBrush']
     $duration = [Windows.Duration]::new([TimeSpan]::FromSeconds(8))
     $animations = @(
-        @{ Stop = $SidebarBrush.GradientStops[0]; Color = '#3659A3' }
-        @{ Stop = $SidebarBrush.GradientStops[1]; Color = '#151C4A' }
-        @{ Stop = $ContentBrush.GradientStops[0]; Color = '#385AA4' }
-        @{ Stop = $ContentBrush.GradientStops[1]; Color = '#151A48' }
+        @{ Stop = $appBackgroundBrush.GradientStops[0]; Color = '#3659A3' }
+        @{ Stop = $appBackgroundBrush.GradientStops[1]; Color = '#151C4A' }
     )
     foreach ($surface in @(
         @{ Key = 'PanelSurfaceBrush'; Colors = @('#4164AB', '#20295E') }
@@ -391,11 +384,7 @@ function Start-Gui {
     <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
-    <LinearGradientBrush x:Key="PurpleSidebarBrush" StartPoint="0,0" EndPoint="0,1">
-      <GradientStop Color="#26345E" Offset="0"/>
-      <GradientStop Color="#182243" Offset="1"/>
-    </LinearGradientBrush>
-    <LinearGradientBrush x:Key="PurpleContentBrush" StartPoint="0,0" EndPoint="1,1">
+    <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
       <GradientStop Color="#26345E" Offset="0"/>
       <GradientStop Color="#0B1024" Offset="1"/>
     </LinearGradientBrush>
@@ -653,7 +642,7 @@ function Start-Gui {
       </Setter>
     </Style>
   </Window.Resources>
-  <Grid>
+  <Grid Background="{StaticResource AppBackgroundBrush}">
     <Grid.RowDefinitions>
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
@@ -665,17 +654,19 @@ function Start-Gui {
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
-      <Border Background="{StaticResource PurpleSidebarBrush}">
+      <Border Background="Transparent">
         <TextBlock Text="AMacQ Configuration Editor" Margin="14,0,0,0"
                    VerticalAlignment="Center" FontSize="13" Foreground="#F7F2FF"/>
       </Border>
 
-      <Border Grid.Column="1" Background="{StaticResource PurpleContentBrush}">
+      <Border Grid.Column="1" Background="Transparent">
         <StackPanel HorizontalAlignment="Right" Orientation="Horizontal"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True">
+          <Button Name="MinimizeBtn" Content="&#xE921;" Style="{StaticResource TitleBarButton}"/>
           <Button Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource CloseTitleBarButton}"/>
         </StackPanel>
       </Border>
+      <Border Grid.ColumnSpan="2" BorderBrush="#FFFFFF" BorderThickness="0,0,0,1" Opacity="0.18" IsHitTestVisible="False"/>
     </Grid>
 
     <Grid Grid.Row="1">
@@ -685,7 +676,7 @@ function Start-Gui {
       </Grid.ColumnDefinitions>
 
     <!-- macOS System Settings-style navigation sidebar -->
-    <Border Name="SidebarPanel" Grid.Column="0" Background="{StaticResource PurpleSidebarBrush}"
+    <Border Name="SidebarPanel" Grid.Column="0" Background="Transparent"
             BorderBrush="#4A3A70" BorderThickness="0,0,1,0">
       <Grid Margin="14,20,14,16">
         <Grid.RowDefinitions>
@@ -736,7 +727,7 @@ function Start-Gui {
     </Border>
 
     <!-- Detail page -->
-    <Grid Name="ContentPanel" Grid.Column="1" Background="{StaticResource PurpleContentBrush}">
+    <Grid Name="ContentPanel" Grid.Column="1" Background="Transparent">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
@@ -822,10 +813,9 @@ function Start-Gui {
     $window = [Windows.Markup.XamlReader]::Parse($xaml)
 
     # Controls
+    $minimizeBtn = $window.FindName('MinimizeBtn')
     $closeBtn = $window.FindName('CloseBtn')
-    $sidebarPanel = $window.FindName('SidebarPanel')
-    $contentPanel = $window.FindName('ContentPanel')
-    Start-AnimatedBackground $window $sidebarPanel $contentPanel
+    Start-AnimatedBackground $window
     $refreshBtn   = $window.FindName('RefreshBtn')
     $browseBtn    = $window.FindName('BrowseBtn')
        $weaponList   = $window.FindName('WeaponList')
@@ -1019,6 +1009,9 @@ function Start-Gui {
     }
 
     # Wire events
+    $minimizeBtn.Add_Click({
+        $window.WindowState = [Windows.WindowState]::Minimized
+    })
     $closeBtn.Add_Click({
         $window.Close()
     })
