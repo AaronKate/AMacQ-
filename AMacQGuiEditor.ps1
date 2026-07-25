@@ -209,6 +209,43 @@ function Read-AMacQConfig {
     $model
 }
 
+function Set-DarkTitleBar {
+    param([Windows.Window]$Window)
+
+    if (!$Window) { return }
+    try {
+        if (!('AMacQ.NativeMethods' -as [type])) {
+            Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+namespace AMacQ {
+    public static class NativeMethods {
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        public static extern int DwmSetWindowAttribute(
+            IntPtr hwnd,
+            int dwAttribute,
+            ref int pvAttribute,
+            int cbAttribute);
+    }
+}
+'@
+        }
+
+        $handle = [Windows.Interop.WindowInteropHelper]::new($Window).Handle
+        if ($handle -eq [IntPtr]::Zero) { return }
+
+        $enabled = 1
+        $size = [Runtime.InteropServices.Marshal]::SizeOf(0)
+        foreach ($attribute in 20, 19) {
+            if ([AMacQ.NativeMethods]::DwmSetWindowAttribute($handle, $attribute, [ref]$enabled, $size) -eq 0) {
+                return
+            }
+        }
+    } catch {
+        # Unsupported Windows versions retain the system title bar.
+    }
+}
+
 function Start-AnimatedBackground {
     param(
         [Windows.Window]$Window,
@@ -756,6 +793,9 @@ function Start-Gui {
 </Window>
 '@
     $window = [Windows.Markup.XamlReader]::Parse($xaml)
+    $window.Add_SourceInitialized({
+        Set-DarkTitleBar $this
+    })
 
     # Controls
     $sidebarPanel = $window.FindName('SidebarPanel')
