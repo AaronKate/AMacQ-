@@ -29,6 +29,27 @@ if ($content -notmatch '\$appBackgroundBrush = \[Windows\.Media\.LinearGradientB
     throw 'The shared application brush must be animated directly.'
 }
 
+if ($content -notmatch '<Image Name="TitleBarIcon" Width="20" Height="20" Margin="12,0,8,0"') {
+    throw 'The custom title bar must contain a 20px TitleBarIcon with the required spacing.'
+}
+
+if ($content -notmatch '<StackPanel Orientation="Horizontal">\s*<Image Name="TitleBarIcon"[\s\S]*?<TextBlock Text="AMacQ Configuration Editor"') {
+    throw 'The title bar icon must appear before the application title text.'
+}
+
+$xamlParseIndex = $content.IndexOf('[Windows.Markup.XamlReader]::Parse($xaml)')
+$setWindowIconIndex = if ($xamlParseIndex -ge 0) { $content.IndexOf('Set-WindowIcon $window', $xamlParseIndex) } else { -1 }
+$titleBarIconLookupIndex = if ($setWindowIconIndex -ge 0) { $content.IndexOf('$titleBarIcon = $window.FindName(''TitleBarIcon'')', $setWindowIconIndex) } else { -1 }
+$titleBarIconAssignmentIndex = if ($titleBarIconLookupIndex -ge 0) { $content.IndexOf('$titleBarIcon.Source = $window.Icon', $titleBarIconLookupIndex) } else { -1 }
+$showDialogIndex = $content.IndexOf('$window.ShowDialog()')
+if ($xamlParseIndex -lt 0 -or
+    $setWindowIconIndex -le $xamlParseIndex -or
+    $titleBarIconLookupIndex -le $setWindowIconIndex -or
+    $titleBarIconAssignmentIndex -le $titleBarIconLookupIndex -or
+    $titleBarIconAssignmentIndex -ge $showDialogIndex) {
+    throw 'The title bar icon source must be synchronized after Window.Icon is loaded and before the window is shown.'
+}
+
 $xamlStart = $content.IndexOf('$xaml = @' + "'")
 $xamlEnd = $content.IndexOf("'@", $xamlStart)
 if ($xamlStart -lt 0 -or $xamlEnd -lt 0) {

@@ -676,8 +676,11 @@ function Start-Gui {
       </Grid.ColumnDefinitions>
 
       <Border Background="Transparent">
-        <TextBlock Text="AMacQ Configuration Editor" Margin="14,0,0,0"
-                   VerticalAlignment="Center" FontSize="13" Foreground="#F7F2FF"/>
+        <StackPanel Orientation="Horizontal">
+          <Image Name="TitleBarIcon" Width="20" Height="20" Margin="12,0,8,0"/>
+          <TextBlock Text="AMacQ Configuration Editor"
+                     VerticalAlignment="Center" FontSize="13" Foreground="#F7F2FF"/>
+        </StackPanel>
       </Border>
 
       <Border Grid.Column="1" Background="Transparent">
@@ -833,6 +836,8 @@ function Start-Gui {
 '@
     $window = [Windows.Markup.XamlReader]::Parse($xaml)
     Set-WindowIcon $window
+    $titleBarIcon = $window.FindName('TitleBarIcon')
+    $titleBarIcon.Source = $window.Icon
 
     # Controls
     $minimizeBtn = $window.FindName('MinimizeBtn')
