@@ -366,6 +366,27 @@ function Build-FieldCards {
     }
 }
 
+function Set-WindowIcon {
+    param([Windows.Window]$Window)
+
+    $executablePath = [Environment]::ProcessPath
+    if ([IO.Path]::GetExtension($PSCommandPath) -eq '.exe' -and $executablePath) {
+        $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($executablePath)
+        if ($icon) {
+            $Window.Icon = [Windows.Interop.Imaging]::CreateBitmapSourceFromHIcon(
+                $icon.Handle,
+                [Windows.Int32Rect]::Empty,
+                [Windows.Media.Imaging.BitmapSizeOptions]::FromEmptyOptions())
+            return
+        }
+    }
+
+    $iconPath = Join-Path $PSScriptRoot 'assets\AMacQ.ico'
+    if (Test-Path -LiteralPath $iconPath) {
+        $Window.Icon = [Windows.Media.Imaging.BitmapFrame]::Create([Uri]$iconPath)
+    }
+}
+
 # ================================================================
 # Start-Gui – main entry point
 # ================================================================
@@ -811,6 +832,7 @@ function Start-Gui {
 </Window>
 '@
     $window = [Windows.Markup.XamlReader]::Parse($xaml)
+    Set-WindowIcon $window
 
     # Controls
     $minimizeBtn = $window.FindName('MinimizeBtn')

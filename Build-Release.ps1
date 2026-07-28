@@ -1,11 +1,16 @@
 ﻿$ErrorActionPreference = 'Stop'
 
 $scriptPath = Join-Path $PSScriptRoot 'AMacQGuiEditor.ps1'
+$iconPath = Join-Path $PSScriptRoot 'assets\AMacQ.ico'
 $outputPath = Join-Path $PSScriptRoot 'dist\AMacQ配置编辑器.exe'
 $outputDirectory = Split-Path -Parent $outputPath
 
 if (!(Test-Path -LiteralPath $scriptPath)) {
     throw "找不到主程序脚本：$scriptPath"
+}
+
+if (!(Test-Path -LiteralPath $iconPath)) {
+    throw "找不到应用图标：$iconPath"
 }
 
 if (!(Get-Module -ListAvailable -Name ps2exe)) {
@@ -22,7 +27,7 @@ if (Test-Path -LiteralPath $outputPath) {
     Remove-Item -LiteralPath $outputPath -Force
 }
 
-Invoke-ps2exe -InputFile $scriptPath -OutputFile $outputPath -NoConsole
+Invoke-ps2exe -InputFile $scriptPath -OutputFile $outputPath -NoConsole -iconFile $iconPath
 
 if (!(Test-Path -LiteralPath $outputPath)) {
     throw "打包失败，未生成 EXE：$outputPath"

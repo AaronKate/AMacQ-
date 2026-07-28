@@ -46,3 +46,45 @@ $gitignore = Get-Content -LiteralPath $gitignorePath -Raw -Encoding UTF8
 if ($gitignore -notmatch '(?m)^dist/\r?$') {
     throw 'Generated dist output must be ignored by Git.'
 }
+
+$iconPath = Join-Path $PSScriptRoot '..\assets\AMacQ.ico'
+if (!(Test-Path -LiteralPath $iconPath)) {
+    throw 'The build must include assets\AMacQ.ico.'
+}
+
+if ($content -notmatch '\$iconPath\s*=\s*Join-Path\s+\$PSScriptRoot\s+''assets\\AMacQ\.ico''') {
+    throw 'The build script must resolve assets\AMacQ.ico.'
+}
+
+if ($content -notmatch 'Test-Path\s+-LiteralPath\s+\$iconPath') {
+    throw 'The build script must validate the icon before packaging.'
+}
+
+if ($content -notmatch '-iconFile\s+\$iconPath') {
+    throw 'The build script must embed the icon with ps2exe.'
+}
+
+$appPath = Join-Path $PSScriptRoot '..\AMacQGuiEditor.ps1'
+$appContent = Get-Content -LiteralPath $appPath -Raw -Encoding UTF8
+if ($appContent -notmatch 'function\s+Set-WindowIcon') {
+    throw 'The application must provide a focused runtime window icon helper.'
+}
+
+if ($appContent -notmatch '\[System\.Drawing\.Icon\]::ExtractAssociatedIcon\(\$executablePath\)') {
+    throw 'The application must use the EXE-embedded icon when running from the packaged application.'
+}
+
+if ($appContent -notmatch '\$iconPath\s*=\s*Join-Path\s+\$PSScriptRoot\s+''assets\\AMacQ\.ico''') {
+    throw 'The application must fall back to assets\AMacQ.ico when running the development PS1.'
+}
+
+$parseIndex = $appContent.IndexOf('[Windows.Markup.XamlReader]::Parse($xaml)')
+$iconCallIndex = $appContent.IndexOf('Set-WindowIcon $window')
+$showDialogIndex = $appContent.IndexOf('$window.ShowDialog()')
+if ($parseIndex -lt 0 -or $iconCallIndex -le $parseIndex -or $iconCallIndex -ge $showDialogIndex) {
+    throw 'The runtime icon helper must run after XAML parsing and before the window is shown.'
+}
+
+if ($appContent -match '<Window[\s\S]*?Icon=') {
+    throw 'The WPF Window must not reference an external icon in XAML.'
+}
