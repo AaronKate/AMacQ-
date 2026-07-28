@@ -369,8 +369,8 @@ function Build-FieldCards {
 function Set-WindowIcon {
     param([Windows.Window]$Window)
 
-    $executablePath = [Environment]::ProcessPath
-    if ([IO.Path]::GetExtension($PSCommandPath) -eq '.exe' -and $executablePath) {
+    $executablePath = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    if ([IO.Path]::GetExtension($executablePath) -eq '.exe') {
         $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($executablePath)
         if ($icon) {
             $Window.Icon = [Windows.Interop.Imaging]::CreateBitmapSourceFromHIcon(

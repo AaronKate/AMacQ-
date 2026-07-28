@@ -70,6 +70,10 @@ if ($appContent -notmatch 'function\s+Set-WindowIcon') {
     throw 'The application must provide a focused runtime window icon helper.'
 }
 
+if ($appContent -notmatch '\[Diagnostics\.Process\]::GetCurrentProcess\(\)\.MainModule\.FileName') {
+    throw 'The application must resolve its current executable path when running from the packaged application.'
+}
+
 if ($appContent -notmatch '\[System\.Drawing\.Icon\]::ExtractAssociatedIcon\(\$executablePath\)') {
     throw 'The application must use the EXE-embedded icon when running from the packaged application.'
 }
