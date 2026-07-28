@@ -19,6 +19,28 @@ if (!(Test-Path -LiteralPath $iconPath)) {
 }
 
 Add-Type -AssemblyName System.Drawing
+$sourceImage = [System.Drawing.Bitmap]::FromFile($sourcePath)
+try {
+    if ($sourceImage.Width -ne 256 -or $sourceImage.Height -ne 256) {
+        throw 'The source icon must be 256 by 256 pixels.'
+    }
+    if ($sourceImage.PixelFormat -ne [System.Drawing.Imaging.PixelFormat]::Format32bppArgb) {
+        throw 'The source icon must use 32-bit ARGB pixels.'
+    }
+    foreach ($corner in @(
+        [System.Drawing.Point]::new(0, 0),
+        [System.Drawing.Point]::new(255, 0),
+        [System.Drawing.Point]::new(0, 255),
+        [System.Drawing.Point]::new(255, 255)
+    )) {
+        if ($sourceImage.GetPixel($corner.X, $corner.Y).A -ne 0) {
+            throw 'The source icon corners must be transparent.'
+        }
+    }
+} finally {
+    $sourceImage.Dispose()
+}
+
 $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($iconPath)
 if (!$icon) {
     throw 'The AMacQ ICO resource could not be read.'
