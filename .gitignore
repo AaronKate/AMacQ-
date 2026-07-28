@@ -12,3 +12,5 @@
 *.suo
 Thumbs.db
 Desktop.ini
+
+.worktrees/
