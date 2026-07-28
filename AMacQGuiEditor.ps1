@@ -117,6 +117,38 @@ function Get-PrimaryWeapons {
     $result
 }
 
+function Get-WeaponListItems {
+    param($ConfigModel)
+
+    $assignments = @{}
+    foreach ($assignment in Get-LuaAssignments $ConfigModel.Files['KeyBindings'].Content) {
+        $assignments[$assignment.Name] = $assignment.Value
+    }
+
+    $bindingFormats = @(
+        @{ Suffix = 'qq1156777787'; Prefix = '' }
+        @{ Suffix = 'qq1156777787_second'; Prefix = 'Alt+' }
+        @{ Suffix = 'Third'; Prefix = 'Ctrl+' }
+    )
+
+    foreach ($weapon in $ConfigModel.Weapons) {
+        $parts = @()
+        foreach ($binding in $bindingFormats) {
+            $variableName = "${weapon}_$($binding.Suffix)"
+            $value = $assignments[$variableName]
+            if ($value -match '^[1-9]$') {
+                $parts += "$($binding.Prefix)$value"
+            }
+        }
+
+        [pscustomobject]@{
+            Name = $weapon
+            BindingSummary = $parts -join ' · '
+            HasBindingSummary = $parts.Count -gt 0
+        }
+    }
+}
+
 function ConvertTo-DecimalValue {
     param([string]$Value, [string]$Pattern = "^-?(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$", [string]$Hint = '请输入有效数值。')
     if ($Value -notmatch $Pattern) { throw $Hint }
@@ -670,26 +702,43 @@ function Start-Gui {
     <Style x:Key="WeaponListItem" TargetType="ListBoxItem">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="{DynamicResource BodyTextBrush}"/>
-      <Setter Property="Padding" Value="10,7"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="MinHeight" Value="38"/>
       <Setter Property="Margin" Value="0"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ListBoxItem">
             <Border x:Name="bd" Background="{TemplateBinding Background}" CornerRadius="6">
-              <ContentPresenter Margin="{TemplateBinding Padding}"
-                                Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
-                                ContentStringFormat="{TemplateBinding ContentStringFormat}"/>
+              <Grid Margin="{TemplateBinding Padding}">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="{Binding Name}"
+                           Foreground="{TemplateBinding Foreground}"
+                           FontWeight="{TemplateBinding FontWeight}"
+                           TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="BindingSummary" Grid.Row="1"
+                           Margin="0,2,0,0"
+                           Text="{Binding BindingSummary}"
+                           Foreground="{StaticResource AccentGradientBrush}"
+                           FontSize="11"
+                           TextWrapping="NoWrap"
+                           TextTrimming="CharacterEllipsis"/>
+              </Grid>
             </Border>
             <ControlTemplate.Triggers>
+              <DataTrigger Binding="{Binding HasBindingSummary}" Value="False">
+                <Setter TargetName="BindingSummary" Property="Visibility" Value="Collapsed"/>
+              </DataTrigger>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
               </Trigger>
               <Trigger Property="IsSelected" Value="True">
                 <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentGradientBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+                <Setter TargetName="BindingSummary" Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
               </Trigger>
               <MultiTrigger>
@@ -699,6 +748,7 @@ function Start-Gui {
                 </MultiTrigger.Conditions>
                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
                 <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+                <Setter TargetName="BindingSummary" Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
               </MultiTrigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -959,15 +1009,22 @@ function Start-Gui {
 
     # ---- Event handlers -------------------------------------------------
     $refreshWeaponList = {
-        $selectedWeapon = $weaponList.SelectedItem
+        param([string]$SelectedWeapon)
+
+        if (!$SelectedWeapon -and $weaponList.SelectedItem) {
+            $SelectedWeapon = $weaponList.SelectedItem.Name
+        }
         $weaponList.Items.Clear()
         if (!$script:ConfigModel) { return }
 
-        $script:ConfigModel.Weapons | ForEach-Object { [void]$weaponList.Items.Add($_) }
+        foreach ($item in Get-WeaponListItems $script:ConfigModel) {
+            [void]$weaponList.Items.Add($item)
+        }
 
         if ($weaponList.Items.Count) {
-            if ($selectedWeapon -and $weaponList.Items.Contains($selectedWeapon)) {
-                $weaponList.SelectedItem = $selectedWeapon
+            $selectedItem = $weaponList.Items | Where-Object Name -eq $SelectedWeapon | Select-Object -First 1
+            if ($selectedItem) {
+                $weaponList.SelectedItem = $selectedItem
             } else {
                 $weaponList.SelectedIndex = 0
             }
@@ -1029,15 +1086,15 @@ function Start-Gui {
     }
 
     $showWeapon = {
-        $weapon = $weaponList.SelectedItem
+        $weapon = $weaponList.SelectedItem.Name
         if (!$weapon -or !$script:ConfigModel) { return }
            Fill-WeaponFields $script:ConfigModel $inputBoxes $weapon $selectedLbl $selectedWeaponLbl $mouseModelList.SelectedItem.Value
     }
 
     $saveChanges = {
         try {
-            $weapon = $weaponList.SelectedItem
             if (!$script:ConfigModel) { return }
+            $weapon = if ($weaponList.SelectedItem) { $weaponList.SelectedItem.Name } else { $null }
             if (!$pressList.SelectedItem) { throw '触发方式：请选择一个选项。' }
             if (!$modeSwitchList.SelectedItem) { throw '灵敏度切换键：请选择一个选项。' }
 
@@ -1101,6 +1158,8 @@ function Start-Gui {
                 Save-LuaFile $fileData.Path $fileData.Content $fileData.Encoding
             }
 
+            $selectedWeapon = $weapon
+            & $refreshWeaponList $selectedWeapon
             $saveBtn.Content = '应用成功'
             if ($script:saveResetTimer) { $script:saveResetTimer.Stop() }
             $script:saveResetTimer = New-Object Windows.Threading.DispatcherTimer
