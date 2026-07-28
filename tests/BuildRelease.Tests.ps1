@@ -41,6 +41,14 @@ if ($readme -notmatch 'Build-Release\.ps1') {
     throw 'README must document the EXE build script.'
 }
 
+if ($readme -notmatch 'assets\\AMacQ\.ico') {
+    throw 'README must identify assets\\AMacQ.ico as the source application icon.'
+}
+
+if ($readme -notmatch 'Convert-Icon\.ps1') {
+    throw 'README must document how developers regenerate the icon.'
+}
+
 $gitignorePath = Join-Path $PSScriptRoot '..\.gitignore'
 $gitignore = Get-Content -LiteralPath $gitignorePath -Raw -Encoding UTF8
 if ($gitignore -notmatch '(?m)^dist/\r?$') {

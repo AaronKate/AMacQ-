@@ -60,6 +60,18 @@ dist\AMacQ配置编辑器.exe
 | `dist\AMacQ配置编辑器.exe` | 构建生成的单文件 Windows 图形程序（发布文件） |
 | `启动AMacQ配置界面.vbs` | 旧版兼容启动器；EXE 发布版本不需要使用它 |
 
+### 应用图标
+
+`assets\AMacQ.ico` 是 EXE、应用窗口、任务栏和 Alt+Tab 共用的图标资源。构建时会将该图标嵌入 `AMacQ配置编辑器.exe`，发布 EXE 时不需要额外分发 ICO 或 PNG 文件。
+
+如需基于新的 PNG 更新图标，将 PNG 保存到项目中，然后执行：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Convert-Icon.ps1 -InputPath .\assets\AMacQ-source.png
+```
+
+完成转换后重新运行 `Build-Release.ps1`。
+
 ## 注意事项
 
 - 请只选择确认可以编辑的配置文件；修改前建议自行备份原文件。
