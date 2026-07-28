@@ -39,10 +39,25 @@ try {
             $left = [int][Math]::Floor(($size - $width) / 2)
             $top = [int][Math]::Floor(($size - $height) / 2)
             $graphics.DrawImage($source, $left, $top, $width, $height)
-            $stream = [System.IO.MemoryStream]::new()
-            $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
-            $images += ,$stream.ToArray()
-            $stream.Dispose()
+            $maskStride = [int]([Math]::Ceiling($size / 32.0) * 4)
+            $image = [byte[]]::new(40 + ($size * $size * 4) + ($maskStride * $size))
+            [BitConverter]::GetBytes([int]40).CopyTo($image, 0)
+            [BitConverter]::GetBytes([int]$size).CopyTo($image, 4)
+            [BitConverter]::GetBytes([int]($size * 2)).CopyTo($image, 8)
+            [BitConverter]::GetBytes([UInt16]1).CopyTo($image, 12)
+            [BitConverter]::GetBytes([UInt16]32).CopyTo($image, 14)
+            [BitConverter]::GetBytes([int]($size * $size * 4)).CopyTo($image, 20)
+            for ($y = 0; $y -lt $size; $y++) {
+                for ($x = 0; $x -lt $size; $x++) {
+                    $color = $bitmap.GetPixel($x, $size - $y - 1)
+                    $pixelOffset = 40 + (($y * $size + $x) * 4)
+                    $image[$pixelOffset] = $color.B
+                    $image[$pixelOffset + 1] = $color.G
+                    $image[$pixelOffset + 2] = $color.R
+                    $image[$pixelOffset + 3] = $color.A
+                }
+            }
+            $images += ,$image
         } finally {
             $graphics.Dispose()
             $bitmap.Dispose()

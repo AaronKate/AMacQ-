@@ -35,6 +35,11 @@ for ($index = 0; $index -lt $iconCount; $index++) {
     if ($width -eq 0) { $width = 256 }
     if ($height -eq 0) { $height = 256 }
     if ($width -ne $height) { throw "Icon entry $index is not square." }
+    $imageOffset = [BitConverter]::ToUInt32($bytes, $entryOffset + 12)
+    if ($bytes[$imageOffset] -eq 0x89 -and $bytes[$imageOffset + 1] -eq 0x50 -and
+        $bytes[$imageOffset + 2] -eq 0x4E -and $bytes[$imageOffset + 3] -eq 0x47) {
+        throw "Icon entry $index uses PNG encoding, which ps2exe cannot embed reliably."
+    }
     $actualSizes += $width
 }
 
