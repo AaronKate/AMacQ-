@@ -216,14 +216,22 @@ function Start-AnimatedBackground {
 
     $appBackgroundBrush = [Windows.Media.LinearGradientBrush]$Window.Resources['AppBackgroundBrush']
     $duration = [Windows.Duration]::new([TimeSpan]::FromSeconds(8))
+    $animationAppStartColor = [Windows.Media.Color]$Window.Resources['AnimationAppStartColor']
+    $animationAppEndColor = [Windows.Media.Color]$Window.Resources['AnimationAppEndColor']
+    $animationPanelStartColor = [Windows.Media.Color]$Window.Resources['AnimationPanelStartColor']
+    $animationPanelEndColor = [Windows.Media.Color]$Window.Resources['AnimationPanelEndColor']
+    $animationInputStartColor = [Windows.Media.Color]$Window.Resources['AnimationInputStartColor']
+    $animationInputEndColor = [Windows.Media.Color]$Window.Resources['AnimationInputEndColor']
+    $animationPopupStartColor = [Windows.Media.Color]$Window.Resources['AnimationPopupStartColor']
+    $animationPopupEndColor = [Windows.Media.Color]$Window.Resources['AnimationPopupEndColor']
     $animations = @(
-        @{ Stop = $appBackgroundBrush.GradientStops[0]; Color = '#3659A3' }
-        @{ Stop = $appBackgroundBrush.GradientStops[1]; Color = '#151C4A' }
+        @{ Stop = $appBackgroundBrush.GradientStops[0]; Color = $animationAppStartColor }
+        @{ Stop = $appBackgroundBrush.GradientStops[1]; Color = $animationAppEndColor }
     )
     foreach ($surface in @(
-        @{ Key = 'PanelSurfaceBrush'; Colors = @('#4164AB', '#20295E') }
-        @{ Key = 'InputSurfaceBrush'; Colors = @('#3A5FA5', '#1C285B') }
-        @{ Key = 'PopupSurfaceBrush'; Colors = @('#4469B2', '#202C66') }
+        @{ Key = 'PanelSurfaceBrush'; Colors = @($animationPanelStartColor, $animationPanelEndColor) }
+        @{ Key = 'InputSurfaceBrush'; Colors = @($animationInputStartColor, $animationInputEndColor) }
+        @{ Key = 'PopupSurfaceBrush'; Colors = @($animationPopupStartColor, $animationPopupEndColor) }
     )) {
         $surfaceBrush = [Windows.Media.LinearGradientBrush]$Window.Resources[$surface.Key].Clone()
         $Window.Resources[$surface.Key] = $surfaceBrush
@@ -234,7 +242,7 @@ function Start-AnimatedBackground {
     }
     foreach ($item in $animations) {
         $animation = [Windows.Media.Animation.ColorAnimation]::new()
-        $animation.To = [Windows.Media.ColorConverter]::new().ConvertFromString($item.Color)
+        $animation.To = [Windows.Media.Color]$item.Color
         $animation.Duration = $duration
         $animation.AutoReverse = $true
         $animation.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
@@ -249,7 +257,14 @@ function Start-AnimatedBackground {
 function Build-FieldCards {
     param($FieldCardsGrid)
 
-    $bc = [Windows.Media.BrushConverter]::new()
+    $primaryTextBrush = $FieldCardsGrid.FindResource('PrimaryTextBrush')
+    $bodyTextBrush = $FieldCardsGrid.FindResource('BodyTextBrush')
+    $secondaryTextBrush = $FieldCardsGrid.FindResource('SecondaryTextBrush')
+    $panelSurfaceBrush = $FieldCardsGrid.FindResource('PanelSurfaceBrush')
+    $inputSurfaceBrush = $FieldCardsGrid.FindResource('InputSurfaceBrush')
+    $controlBorderBrush = $FieldCardsGrid.FindResource('ControlBorderBrush')
+    $dividerBrush = $FieldCardsGrid.FindResource('DividerBrush')
+    $focusBorderBrush = $FieldCardsGrid.FindResource('FocusBorderBrush')
     $FieldCardsGrid.Children.Clear()
     $groups = @{}
     foreach ($field in $script:FieldDefs) {
@@ -267,7 +282,7 @@ function Build-FieldCards {
         $header = New-Object Windows.Controls.TextBlock
         $header.Text = if ($file -eq $script:TargetFiles[0]) { '按键' } else { '灵敏度' }
         $header.FontWeight = 'SemiBold'; $header.FontSize = 12
-        $header.Foreground = $bc.ConvertFromString('#BDB3DD')
+        $header.Foreground = $secondaryTextBrush
         $header.Margin = '0,0,0,8'
         [void]$section.Children.Add($header)
 
@@ -276,7 +291,9 @@ function Build-FieldCards {
         $list.Margin = '0'
 
         $outer = New-Object Windows.Controls.Border
-        $outer.Background = [Windows.Media.Brushes]::Transparent
+        $outer.Background = $panelSurfaceBrush
+        $outer.BorderBrush = $controlBorderBrush
+        $outer.BorderThickness = '1'
         $outer.CornerRadius = 10
         $outer.Margin = '0'
         $outer.Child = $list
@@ -292,7 +309,7 @@ function Build-FieldCards {
 
             $label = New-Object Windows.Controls.TextBlock
             $label.Text = $field.Label; $label.FontSize = 13
-            $label.Foreground = $bc.ConvertFromString('#EDE7FF')
+            $label.Foreground = $bodyTextBrush
             $label.VerticalAlignment = 'Center'; $label.Margin = '14,0,8,0'
             [Windows.Controls.Grid]::SetColumn($label, 0)
             [void]$row.Children.Add($label)
@@ -305,21 +322,21 @@ function Build-FieldCards {
                 $ctrl.ItemContainerStyle = $FieldCardsGrid.FindResource('DarkComboBoxItem')
             } else {
                 $ctrl = New-Object Windows.Controls.TextBox
-                $ctrl.CaretBrush = $bc.ConvertFromString('#5DD7FF'); $ctrl.Padding = '8,2'
+                $ctrl.CaretBrush = $focusBorderBrush; $ctrl.Padding = '8,2'
             }
             $ctrl.Height = 30; $ctrl.Width = 140; $ctrl.FontSize = 13
             $styleKey = if ($field.Type -eq 'Combo') { 'DarkComboBox' } else { 'DarkTextBox' }
             $ctrl.Style = $FieldCardsGrid.FindResource($styleKey)
-            $ctrl.Background = [Windows.Media.Brushes]::Transparent
-            $ctrl.BorderBrush = $bc.ConvertFromString('#6488C4')
-            $ctrl.BorderThickness = '1'; $ctrl.Foreground = $bc.ConvertFromString('#F7F2FF')
+            $ctrl.Background = $inputSurfaceBrush
+            $ctrl.BorderBrush = $controlBorderBrush
+            $ctrl.BorderThickness = '1'; $ctrl.Foreground = $primaryTextBrush
             $ctrl.VerticalAlignment = 'Center'; $ctrl.HorizontalAlignment = 'Right'; $ctrl.Margin = '0,0,10,0'
             [Windows.Controls.Grid]::SetColumn($ctrl, 1)
             [void]$row.Children.Add($ctrl)
 
             if ($i -lt $fields.Count - 1) {
                 $line = New-Object Windows.Controls.Border
-                $line.Height = 1; $line.Background = $bc.ConvertFromString('#4A3A70')
+                $line.Height = 1; $line.Background = $dividerBrush
                 $line.HorizontalAlignment = 'Stretch'; $line.Margin = '14,43,0,0'
                 [void]$row.Children.Add($line)
             }
@@ -400,42 +417,115 @@ function Start-Gui {
         Title="AMacQ Configuration Editor" Height="600" Width="860"
         MinHeight="520" MinWidth="760" WindowStartupLocation="CenterScreen"
         WindowStyle="None" ResizeMode="CanResize"
-        Background="#20193D" Foreground="#F7F2FF" FontFamily="Segoe UI">
+        Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
+    <!-- Theme palette: change only these Color resources to retheme the application. -->
+    <Color x:Key="SurfaceAppStartColor">#263B68</Color>
+    <Color x:Key="SurfaceAppEndColor">#090E20</Color>
+    <Color x:Key="AuroraGlowStartColor">#3022D3EE</Color>
+    <Color x:Key="AuroraGlowMiddleColor">#1022D3EE</Color>
+    <Color x:Key="AuroraGlowEndColor">#0022D3EE</Color>
+    <Color x:Key="AccentCyanColor">#22D3EE</Color>
+    <Color x:Key="AccentIndigoColor">#6366F1</Color>
+    <Color x:Key="SurfaceSidebarStartColor">#1A243F</Color>
+    <Color x:Key="SurfaceSidebarEndColor">#10192D</Color>
+    <Color x:Key="SurfaceContentStartColor">#1B3F62</Color>
+    <Color x:Key="SurfaceContentEndColor">#0B1428</Color>
+    <Color x:Key="SurfacePanelStartColor">#1A3556</Color>
+    <Color x:Key="SurfacePanelEndColor">#0F2038</Color>
+    <Color x:Key="SurfaceInputStartColor">#132440</Color>
+    <Color x:Key="SurfaceInputEndColor">#0D1B32</Color>
+    <Color x:Key="SurfacePopupStartColor">#142942</Color>
+    <Color x:Key="SurfacePopupEndColor">#091526</Color>
+    <Color x:Key="TextPrimaryColor">#F7F2FF</Color>
+    <Color x:Key="TextBodyColor">#EDE7FF</Color>
+    <Color x:Key="TextSecondaryColor">#B9CAE0</Color>
+    <Color x:Key="TextListColor">#DCEBFA</Color>
+    <Color x:Key="AccentForegroundColor">#FFFFFFFF</Color>
+    <Color x:Key="BorderControlColor">#4E8FAE</Color>
+    <Color x:Key="BorderFocusColor">#5DD7FF</Color>
+    <Color x:Key="BorderDividerColor">#31506E</Color>
+    <Color x:Key="BorderPanelColor">#6488C4</Color>
+    <Color x:Key="ControlHoverColor">#1E5274</Color>
+    <Color x:Key="ControlPressedColor">#17415F</Color>
+    <Color x:Key="ScrollTrackColor">#10243A</Color>
+    <Color x:Key="ScrollThumbColor">#5577C8</Color>
+    <Color x:Key="ScrollThumbHoverColor">#71E1FF</Color>
+    <Color x:Key="DangerCloseHoverColor">#C42B4B</Color>
+    <Color x:Key="TitleBarDividerColor">#30FFFFFF</Color>
+    <Color x:Key="AnimationAppStartColor">#315C8F</Color>
+    <Color x:Key="AnimationAppEndColor">#0C142B</Color>
+    <Color x:Key="AnimationPanelStartColor">#204A70</Color>
+    <Color x:Key="AnimationPanelEndColor">#122944</Color>
+    <Color x:Key="AnimationInputStartColor">#183153</Color>
+    <Color x:Key="AnimationInputEndColor">#10213B</Color>
+    <Color x:Key="AnimationPopupStartColor">#1A3554</Color>
+    <Color x:Key="AnimationPopupEndColor">#0B1B30</Color>
+
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="BodyTextBrush" Color="{StaticResource TextBodyColor}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="ListItemTextBrush" Color="{StaticResource TextListColor}"/>
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="{StaticResource AccentForegroundColor}"/>
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="{StaticResource BorderControlColor}"/>
+    <SolidColorBrush x:Key="FocusBorderBrush" Color="{StaticResource BorderFocusColor}"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource BorderDividerColor}"/>
+    <SolidColorBrush x:Key="PanelOutlineBrush" Color="{StaticResource BorderPanelColor}"/>
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="{StaticResource ControlHoverColor}"/>
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="{StaticResource ControlPressedColor}"/>
+    <SolidColorBrush x:Key="ScrollTrackBrush" Color="{StaticResource ScrollTrackColor}"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource ScrollThumbColor}"/>
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}"/>
+    <SolidColorBrush x:Key="WindowCloseHoverBrush" Color="{StaticResource DangerCloseHoverColor}"/>
+    <SolidColorBrush x:Key="TitleBarDividerBrush" Color="{StaticResource TitleBarDividerColor}"/>
+
     <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-      <GradientStop Color="#26345E" Offset="0"/>
-      <GradientStop Color="#0B1024" Offset="1"/>
+      <GradientStop Color="{StaticResource SurfaceAppStartColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource SurfaceAppEndColor}" Offset="1"/>
     </LinearGradientBrush>
+    <RadialGradientBrush x:Key="AuroraGlowBrush" Center="0.12,0.08" GradientOrigin="0.12,0.08" RadiusX="0.78" RadiusY="0.70">
+      <GradientStop Color="{StaticResource AuroraGlowStartColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource AuroraGlowMiddleColor}" Offset="0.38"/>
+      <GradientStop Color="{StaticResource AuroraGlowEndColor}" Offset="1"/>
+    </RadialGradientBrush>
     <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,0">
-      <GradientStop Color="#22D3EE" Offset="0"/>
-      <GradientStop Color="#6366F1" Offset="1"/>
+      <GradientStop Color="{StaticResource AccentCyanColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource AccentIndigoColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="PanelSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.46">
-      <GradientStop Color="#2A416F" Offset="0"/>
-      <GradientStop Color="#16264C" Offset="1"/>
+    <LinearGradientBrush x:Key="SidebarSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.82">
+      <GradientStop Color="{StaticResource SurfaceSidebarStartColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource SurfaceSidebarEndColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="InputSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.62">
-      <GradientStop Color="#203B68" Offset="0"/>
-      <GradientStop Color="#122446" Offset="1"/>
+    <LinearGradientBrush x:Key="ContentSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.26">
+      <GradientStop Color="{StaticResource SurfaceContentStartColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource SurfaceContentEndColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="PopupSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.97">
-      <GradientStop Color="#284675" Offset="0"/>
-      <GradientStop Color="#14284E" Offset="1"/>
+    <LinearGradientBrush x:Key="PanelSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.62">
+      <GradientStop Color="{StaticResource SurfacePanelStartColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource SurfacePanelEndColor}" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="InputSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
+      <GradientStop Color="{StaticResource SurfaceInputStartColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource SurfaceInputEndColor}" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="PopupSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.99">
+      <GradientStop Color="{StaticResource SurfacePopupStartColor}" Offset="0"/>
+      <GradientStop Color="{StaticResource SurfacePopupEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <Style x:Key="DarkScrollThumb" TargetType="Thumb">
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Thumb">
-            <Border x:Name="ScrollThumb" Background="#5577C8" CornerRadius="5" Margin="1"/>
+            <Border x:Name="ScrollThumb" Background="{DynamicResource ScrollThumbBrush}" CornerRadius="5" Margin="1"/>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="ScrollThumb" Property="Background" Value="#71E1FF"/>
+                <Setter TargetName="ScrollThumb" Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}"/>
               </Trigger>
               <Trigger Property="IsDragging" Value="True">
-                <Setter TargetName="ScrollThumb" Property="Background" Value="#5DD7FF"/>
+                <Setter TargetName="ScrollThumb" Property="Background" Value="{DynamicResource FocusBorderBrush}"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -453,7 +543,7 @@ function Start-Gui {
     </Style>
     <Style TargetType="ScrollBar">
       <Setter Property="Width" Value="11"/>
-      <Setter Property="Background" Value="#1B315A"/>
+      <Setter Property="Background" Value="{DynamicResource ScrollTrackBrush}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ScrollBar">
@@ -475,34 +565,39 @@ function Start-Gui {
       </Setter>
     </Style>
     <Style TargetType="TextBox">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="#F7F2FF"/>
-      <Setter Property="BorderBrush" Value="#6488C4"/>
+      <Setter Property="Background" Value="{DynamicResource InputSurfaceBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
     </Style>
     <Style TargetType="ComboBox">
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="#F7F2FF"/>
-      <Setter Property="BorderBrush" Value="#6488C4"/>
+      <Setter Property="Background" Value="{DynamicResource InputSurfaceBrush}"/>
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
     </Style>
     <Style x:Key="DarkTextBox" TargetType="TextBox">
-      <Setter Property="Foreground" Value="#F7F2FF"/>
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="#6488C4"/>
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource InputSurfaceBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="TextBox">
-            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+            <Border x:Name="TextBoxBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
               <ScrollViewer x:Name="PART_ContentHost" VerticalContentAlignment="Center" Margin="{TemplateBinding Padding}"/>
             </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{DynamicResource ControlHoverBrush}"/></Trigger>
+              <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.52"/></Trigger>
+            </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
     </Style>
     <Style x:Key="DarkComboBox" TargetType="ComboBox">
-      <Setter Property="Foreground" Value="#F7F2FF"/>
-      <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="#6488C4"/>
+      <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+      <Setter Property="Background" Value="{DynamicResource InputSurfaceBrush}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ComboBox">
@@ -513,15 +608,16 @@ function Start-Gui {
                     <ControlTemplate TargetType="ToggleButton">
                       <Border x:Name="ComboToggleBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5"><ContentPresenter/></Border>
                       <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ComboToggleBorder" Property="Background" Value="#3856B8"/></Trigger>
-                        <Trigger Property="IsChecked" Value="True"><Setter TargetName="ComboToggleBorder" Property="Background" Value="#3856B8"/></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ComboToggleBorder" Property="Background" Value="{DynamicResource ControlHoverBrush}"/></Trigger>
+                        <Trigger Property="IsChecked" Value="True"><Setter TargetName="ComboToggleBorder" Property="Background" Value="{DynamicResource ControlHoverBrush}"/></Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="ComboToggleBorder" Property="BorderBrush" Value="{DynamicResource FocusBorderBrush}"/></Trigger>
                       </ControlTemplate.Triggers>
                     </ControlTemplate>
                   </ToggleButton.Template>
-                  <Grid><TextBlock Margin="9,0,28,0" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" Text="{Binding SelectedItem.Text, RelativeSource={RelativeSource TemplatedParent}}"/><Path Data="M 0 0 L 6 0 L 3 4 Z" Fill="#BDB3DD" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/></Grid>
+                  <Grid><TextBlock Margin="9,0,28,0" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" Text="{Binding SelectedItem.Text, RelativeSource={RelativeSource TemplatedParent}}"/><Path Data="M 0 0 L 6 0 L 3 4 Z" Fill="{DynamicResource SecondaryTextBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/></Grid>
                 </ToggleButton>
               <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True">
-                <Border Background="{DynamicResource PopupSurfaceBrush}" BorderBrush="#6488C4" BorderThickness="1" MinWidth="{Binding ActualWidth, ElementName=ToggleButton}">
+                <Border Background="{DynamicResource PopupSurfaceBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" MinWidth="{Binding ActualWidth, ElementName=ToggleButton}">
                   <ScrollViewer MaxHeight="220"><ItemsPresenter/></ScrollViewer>
                 </Border>
               </Popup>
@@ -531,7 +627,7 @@ function Start-Gui {
       </Setter>
     </Style>
     <Style x:Key="DarkComboBoxItem" TargetType="ComboBoxItem">
-      <Setter Property="Foreground" Value="#EDE7FF"/>
+      <Setter Property="Foreground" Value="{DynamicResource ListItemTextBrush}"/>
       <Setter Property="Padding" Value="9,6"/>
       <Setter Property="Template">
         <Setter.Value>
@@ -540,8 +636,8 @@ function Start-Gui {
               <TextBlock Text="{Binding Text}" Foreground="{TemplateBinding Foreground}"/>
             </Border>
             <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="#3856B8"/></Trigger>
-              <Trigger Property="IsSelected" Value="True"><Setter TargetName="bd" Property="Background" Value="{StaticResource AccentGradientBrush}"/><Setter Property="Foreground" Value="White"/></Trigger>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/></Trigger>
+              <Trigger Property="IsSelected" Value="True"><Setter TargetName="bd" Property="Background" Value="{StaticResource AccentGradientBrush}"/><Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
@@ -561,10 +657,10 @@ function Start-Gui {
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#3856B8"/>
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#2A4FAD"/>
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -573,7 +669,7 @@ function Start-Gui {
     </Style>
     <Style x:Key="WeaponListItem" TargetType="ListBoxItem">
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="Foreground" Value="#EDE7FF"/>
+      <Setter Property="Foreground" Value="{DynamicResource BodyTextBrush}"/>
       <Setter Property="Padding" Value="10,7"/>
       <Setter Property="Margin" Value="0"/>
       <Setter Property="BorderThickness" Value="0"/>
@@ -589,11 +685,11 @@ function Start-Gui {
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#3856B8"/>
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
               </Trigger>
               <Trigger Property="IsSelected" Value="True">
                 <Setter TargetName="bd" Property="Background" Value="{StaticResource AccentGradientBrush}"/>
-                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
                 <Setter Property="FontWeight" Value="SemiBold"/>
               </Trigger>
               <MultiTrigger>
@@ -601,8 +697,8 @@ function Start-Gui {
                   <Condition Property="IsSelected" Value="True"/>
                   <Condition Property="Selector.IsSelectionActive" Value="False"/>
                 </MultiTrigger.Conditions>
-                <Setter TargetName="bd" Property="Background" Value="#3856B8"/>
-                <Setter Property="Foreground" Value="White"/>
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
               </MultiTrigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -612,7 +708,7 @@ function Start-Gui {
     <Style x:Key="TitleBarButton" TargetType="Button">
       <Setter Property="Width" Value="46"/>
       <Setter Property="Height" Value="38"/>
-      <Setter Property="Foreground" Value="#EDE7FF"/>
+      <Setter Property="Foreground" Value="{DynamicResource BodyTextBrush}"/>
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
       <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
@@ -625,10 +721,10 @@ function Start-Gui {
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#3856B8"/>
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="#2A4FAD"/>
+                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -638,7 +734,7 @@ function Start-Gui {
     <Style x:Key="CloseTitleBarButton" TargetType="Button" BasedOn="{StaticResource TitleBarButton}">
       <Style.Triggers>
         <Trigger Property="IsMouseOver" Value="True">
-          <Setter Property="Background" Value="#C42B4B"/>
+          <Setter Property="Background" Value="{DynamicResource WindowCloseHoverBrush}"/>
         </Trigger>
       </Style.Triggers>
     </Style>
@@ -668,6 +764,7 @@ function Start-Gui {
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
+    <Border Grid.RowSpan="2" Background="{StaticResource AuroraGlowBrush}" IsHitTestVisible="False"/>
 
     <Grid Name="TitleBar" Grid.Row="0">
       <Grid.ColumnDefinitions>
@@ -679,7 +776,7 @@ function Start-Gui {
         <StackPanel Orientation="Horizontal">
           <Image Name="TitleBarIcon" Width="20" Height="20" Margin="12,0,8,0"/>
           <TextBlock Text="AMacQ Configuration Editor"
-                     VerticalAlignment="Center" FontSize="13" Foreground="#F7F2FF"/>
+                     VerticalAlignment="Center" FontSize="13" Foreground="{DynamicResource PrimaryTextBrush}"/>
         </StackPanel>
       </Border>
 
@@ -690,7 +787,7 @@ function Start-Gui {
           <Button Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource CloseTitleBarButton}"/>
         </StackPanel>
       </Border>
-      <Border Grid.ColumnSpan="2" BorderBrush="#FFFFFF" BorderThickness="0,0,0,1" Opacity="0.18" IsHitTestVisible="False"/>
+      <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource TitleBarDividerBrush}" BorderThickness="0,0,0,1" IsHitTestVisible="False"/>
     </Grid>
 
     <Grid Grid.Row="1">
@@ -700,8 +797,8 @@ function Start-Gui {
       </Grid.ColumnDefinitions>
 
     <!-- macOS System Settings-style navigation sidebar -->
-    <Border Name="SidebarPanel" Grid.Column="0" Background="Transparent"
-            BorderBrush="#4A3A70" BorderThickness="0,0,1,0">
+    <Border Name="SidebarPanel" Grid.Column="0" Background="{StaticResource SidebarSurfaceBrush}"
+            BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
       <Grid Margin="14,20,14,16">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
@@ -719,18 +816,18 @@ function Start-Gui {
                         FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AccentGradientBrush}"
                         Margin="6,0,0,20"/>
                 <Button Name="RefreshBtn" Grid.Column="1" Content="刷新" Style="{StaticResource SidebarButton}"
-                        Foreground="#F7F2FF" FontSize="12" Padding="8,6" Margin="0,0,0,14"/>
+                        Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Padding="8,6" Margin="0,0,0,14"/>
                <Button Name="BrowseBtn" Grid.Column="2" Content="选择文件..." Style="{StaticResource SidebarButton}"
-                        Foreground="#F7F2FF" FontSize="12" Padding="8,6" Margin="0,0,0,14"/>
+                        Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Padding="8,6" Margin="0,0,0,14"/>
         </Grid>
 
         <StackPanel Grid.Row="1">
-          <TextBlock Text="鼠标型号" FontSize="12" Foreground="#BDB3DD"
+          <TextBlock Text="鼠标型号" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"
                      Margin="6,0,0,5"/>
             <ComboBox Name="MouseModelList" Height="30" FontSize="13"
                       Style="{StaticResource DarkComboBox}"
-                         Foreground="#F7F2FF" Background="Transparent"
-                      BorderBrush="#6488C4" BorderThickness="1" Margin="0,0,0,16"
+                         Foreground="{DynamicResource PrimaryTextBrush}" Background="{DynamicResource InputSurfaceBrush}"
+                      BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" Margin="0,0,0,16"
                     VerticalContentAlignment="Center"
                     ItemContainerStyle="{StaticResource DarkComboBoxItem}"/>
         </StackPanel>
@@ -740,18 +837,18 @@ function Start-Gui {
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
-            <TextBlock Text="枪械" FontSize="11" FontWeight="SemiBold" Foreground="#BDB3DD"
+            <TextBlock Text="枪械" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}"
                        Margin="6,0,0,7"/>
-            <Border Grid.Row="1" BorderBrush="#6488C4" BorderThickness="1" CornerRadius="8" Background="Transparent">
+            <Border Grid.Row="1" BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="8" Background="Transparent">
             <ListBox Name="WeaponList" BorderThickness="0" Background="Transparent"
-                     FontSize="14" Foreground="#1D1D1F"/>
+                     FontSize="14" Foreground="{DynamicResource ListItemTextBrush}"/>
           </Border>
         </Grid>
       </Grid>
     </Border>
 
     <!-- Detail page -->
-    <Grid Name="ContentPanel" Grid.Column="1" Background="Transparent">
+    <Grid Name="ContentPanel" Grid.Column="1" Background="{StaticResource ContentSurfaceBrush}">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
@@ -759,22 +856,22 @@ function Start-Gui {
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
-      <Border BorderBrush="#5476AF" BorderThickness="0,0,0,1" Padding="32,22,32,20">
+      <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="32,22,32,20">
            <StackPanel>
                 <StackPanel Orientation="Horizontal">
                   <TextBlock Name="SelectedLabel" Text="请选择枪械"
-                             FontSize="26" FontWeight="SemiBold" Foreground="#F7F2FF"/>
+                             FontSize="26" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
                   <TextBlock Name="SelectedWeaponLabel"
                              FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource AccentGradientBrush}"/>
                 </StackPanel>
              <TextBlock Name="LocalOnlyNotice" Text="仅编辑所选目录中的配置文件，不与游戏进程交互"
-                        FontSize="11" Foreground="#BDB3DD" Margin="0,6,0,0"/>
+                        FontSize="11" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,6,0,0"/>
            </StackPanel>
       </Border>
 
-      <Border Grid.Row="1" BorderBrush="#5476AF" BorderThickness="0,0,0,1" Padding="32,14">
+      <Border Grid.Row="1" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="32,14">
         <StackPanel MaxWidth="760" HorizontalAlignment="Left">
-          <TextBlock Text="全局设置" FontSize="13" FontWeight="SemiBold" Foreground="#BDB3DD"
+          <TextBlock Text="全局设置" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}"
                      Margin="0,0,0,10"/>
           <Grid>
             <Grid.ColumnDefinitions>
@@ -783,18 +880,18 @@ function Start-Gui {
               <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
             <StackPanel>
-              <TextBlock Text="触发方式" FontSize="12" Foreground="#D8D0EF" Margin="0,0,0,5"/>
+              <TextBlock Text="触发方式" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,0,5"/>
                  <ComboBox Name="PressList" Height="30" FontSize="13" DisplayMemberPath="Text"
                            Style="{StaticResource DarkComboBox}"
-                              Foreground="#F7F2FF" Background="Transparent" BorderBrush="#6488C4" BorderThickness="1"
+                              Foreground="{DynamicResource PrimaryTextBrush}" Background="{DynamicResource InputSurfaceBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1"
                         VerticalContentAlignment="Center"
                         ItemContainerStyle="{StaticResource DarkComboBoxItem}"/>
             </StackPanel>
             <StackPanel Grid.Column="2">
-              <TextBlock Text="灵敏度增幅激活键" FontSize="12" Foreground="#D8D0EF" Margin="0,0,0,5"/>
+              <TextBlock Text="灵敏度增幅激活键" FontSize="12" Foreground="{StaticResource SecondaryTextBrush}" Margin="0,0,0,5"/>
                  <ComboBox Name="ModeSwitchList" Height="30" FontSize="13" DisplayMemberPath="Text"
                            Style="{StaticResource DarkComboBox}"
-                              Foreground="#F7F2FF" Background="Transparent" BorderBrush="#6488C4" BorderThickness="1"
+                              Foreground="{DynamicResource PrimaryTextBrush}" Background="{DynamicResource InputSurfaceBrush}" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1"
                         VerticalContentAlignment="Center"
                         ItemContainerStyle="{StaticResource DarkComboBoxItem}"/>
             </StackPanel>
@@ -804,30 +901,18 @@ function Start-Gui {
 
       <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="32,24,32,20">
         <StackPanel MaxWidth="760" HorizontalAlignment="Left">
-          <TextBlock Text="配置详情" FontSize="13" FontWeight="SemiBold" Foreground="#BDB3DD"
+          <TextBlock Text="配置详情" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}"
                      Margin="0,0,0,12"/>
           <UniformGrid Name="FieldCards" Columns="2" Rows="1"/>
         </StackPanel>
       </ScrollViewer>
 
-      <Border Grid.Row="3" BorderBrush="#5476AF" BorderThickness="0,1,0,0" Padding="32,14">
+      <Border Grid.Row="3" BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,1,0,0" Padding="32,14">
         <DockPanel LastChildFill="False">
             <Button Name="SaveBtn" Content="应用" Style="{StaticResource PrimaryButton}"
-                     Background="{StaticResource AccentGradientBrush}" Foreground="White" FontSize="14" FontWeight="SemiBold"
+                     Background="{StaticResource AccentGradientBrush}" Foreground="{DynamicResource AccentForegroundBrush}" FontSize="14" FontWeight="SemiBold"
                   Padding="28,9" DockPanel.Dock="Right"/>
         </DockPanel>
-      </Border>
-      <Border Name="ScanlineOverlay" Grid.ColumnSpan="2" IsHitTestVisible="False" Opacity="0.08">
-        <Border.Background>
-          <DrawingBrush TileMode="Tile" Viewport="0,0,1,4" ViewportUnits="Absolute" Viewbox="0,0,1,4" ViewboxUnits="Absolute">
-            <DrawingBrush.Drawing>
-              <GeometryDrawing>
-                <GeometryDrawing.Pen><Pen Brush="#66BDEBFF" Thickness="1"/></GeometryDrawing.Pen>
-                <GeometryDrawing.Geometry><LineGeometry StartPoint="0,0" EndPoint="1,0"/></GeometryDrawing.Geometry>
-              </GeometryDrawing>
-            </DrawingBrush.Drawing>
-          </DrawingBrush>
-        </Border.Background>
       </Border>
     </Grid>
     </Grid>
