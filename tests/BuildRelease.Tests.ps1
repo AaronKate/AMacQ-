@@ -29,3 +29,20 @@ if ($content -notmatch 'Invoke-ps2exe' -or
 if ($content -notmatch 'Test-Path\s+-LiteralPath\s+\$outputPath') {
     throw 'The build script must verify that the executable was generated.'
 }
+
+$readmePath = Join-Path $PSScriptRoot '..\README.md'
+$readme = Get-Content -LiteralPath $readmePath -Raw -Encoding UTF8
+
+if ($readme -notmatch 'AMacQ配置编辑器\.exe') {
+    throw 'README must document the EXE launcher.'
+}
+
+if ($readme -notmatch 'Build-Release\.ps1') {
+    throw 'README must document the EXE build script.'
+}
+
+$gitignorePath = Join-Path $PSScriptRoot '..\.gitignore'
+$gitignore = Get-Content -LiteralPath $gitignorePath -Raw -Encoding UTF8
+if ($gitignore -notmatch '(?m)^dist/\r?$') {
+    throw 'Generated dist output must be ignored by Git.'
+}

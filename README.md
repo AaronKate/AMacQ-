@@ -21,16 +21,26 @@
 
 ## 启动
 
-推荐双击根目录中的：
+发布版本中，双击根目录的：
 
 ```text
-启动AMacQ配置界面.vbs
+AMacQ配置编辑器.exe
 ```
 
-也可以在 PowerShell 中进入项目目录后执行：
+即可启动图形编辑器，无需保留或运行 PowerShell 启动器。
+
+### 开发者构建
+
+主程序源码为 `AMacQGuiEditor.ps1`。修改源码后，在项目根目录的 PowerShell 中执行：
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File .\AMacQGuiEditor.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Build-Release.ps1
+```
+
+构建脚本会在当前用户范围自动安装缺失的 `ps2exe` 模块，并生成：
+
+```text
+dist\AMacQ配置编辑器.exe
 ```
 
 ## 使用步骤
@@ -45,8 +55,10 @@ powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File .\AMacQGuiEditor.p
 
 | 文件 | 说明 |
 | --- | --- |
-| `AMacQGuiEditor.ps1` | PowerShell + WPF 图形编辑器主程序 |
-| `启动AMacQ配置界面.vbs` | 用于启动主程序的 Windows 脚本 |
+| `AMacQGuiEditor.ps1` | PowerShell + WPF 图形编辑器主程序源码 |
+| `Build-Release.ps1` | 使用 ps2exe 打包 EXE 的开发者构建脚本 |
+| `dist\AMacQ配置编辑器.exe` | 构建生成的单文件 Windows 图形程序（发布文件） |
+| `启动AMacQ配置界面.vbs` | 旧版兼容启动器；EXE 发布版本不需要使用它 |
 
 ## 注意事项
 
