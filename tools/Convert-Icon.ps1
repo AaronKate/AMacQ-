@@ -2,10 +2,14 @@ param(
     [Parameter(Mandatory)]
     [string]$InputPath,
 
-    [string]$OutputPath = (Join-Path $PSScriptRoot '..\assets\AMacQ.ico')
+    [string]$OutputPath
 )
 
 $ErrorActionPreference = 'Stop'
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $OutputPath = Join-Path $PSScriptRoot '..\assets\AMacQ.ico'
+}
+
 Add-Type -AssemblyName System.Drawing
 
 if (!(Test-Path -LiteralPath $InputPath)) {

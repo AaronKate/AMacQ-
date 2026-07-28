@@ -1,6 +1,19 @@
 $ErrorActionPreference = 'Stop'
 
-$iconPath = Join-Path $PSScriptRoot '..\assets\AMacQ.ico'
+$projectRoot = Join-Path $PSScriptRoot '..'
+$iconPath = Join-Path $projectRoot 'assets\AMacQ.ico'
+$converterPath = Join-Path $projectRoot 'tools\Convert-Icon.ps1'
+$sourcePath = Join-Path $projectRoot 'assets\AMacQ-source.png'
+
+Remove-Item -LiteralPath $iconPath -Force -ErrorAction SilentlyContinue
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $converterPath -InputPath $sourcePath
+if ($LASTEXITCODE -ne 0) {
+    throw "The documented converter invocation failed with exit code $LASTEXITCODE."
+}
+if (!(Test-Path -LiteralPath $iconPath)) {
+    throw 'The documented converter invocation must create assets\AMacQ.ico by default.'
+}
+
 if (!(Test-Path -LiteralPath $iconPath)) {
     throw 'The AMacQ ICO resource is required.'
 }
