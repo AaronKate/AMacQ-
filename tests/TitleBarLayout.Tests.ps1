@@ -34,6 +34,9 @@ if ($embeddedIcon -match 'ExtractAssociatedIcon' -or $setWindowIcon -match 'Extr
 if (!$setWindowIcon.Contains('Get-EmbeddedApplicationIcon')) {
     throw 'The packaged application must use the direct embedded icon loader.'
 }
+if ($embeddedIcon -notmatch 'LoadImageW\(\$module, \$groupIconId, \[NativeIcon\]::IMAGE_ICON, 32, 32, 0\)') {
+    throw 'The embedded application icon loader must request a 32px taskbar icon.'
+}
 
 foreach ($requiredColor in @(
     'x:Key="TextPrimaryColor"',

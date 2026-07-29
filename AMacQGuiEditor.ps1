@@ -460,7 +460,7 @@ function Get-EmbeddedApplicationIcon {
     $groupIconId = [NativeIcon]::GetFirstGroupIconId($module)
     if ($groupIconId -eq [IntPtr]::Zero) { return $null }
 
-    $hIcon = [NativeIcon]::LoadImageW($module, $groupIconId, [NativeIcon]::IMAGE_ICON, 0, 0, 0)
+    $hIcon = [NativeIcon]::LoadImageW($module, $groupIconId, [NativeIcon]::IMAGE_ICON, 32, 32, 0)
     if ($hIcon -eq [IntPtr]::Zero) { return $null }
 
     try {
