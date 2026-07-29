@@ -42,8 +42,8 @@ try {
     }
 
     $topCenter = $sourceImage.GetPixel(128, 8)
-    if ($topCenter.A -ne 255) {
-        throw 'The rounded mask must preserve the dark background and green border inside its top edge.'
+    if ($topCenter.A -ne 0) {
+        throw 'The source icon must keep the space above the mark transparent.'
     }
 
     $center = $sourceImage.GetPixel(128, 128)
