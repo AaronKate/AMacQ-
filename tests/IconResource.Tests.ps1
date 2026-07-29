@@ -47,8 +47,8 @@ try {
     }
 
     $center = $sourceImage.GetPixel(128, 128)
-    if ($center.A -ne 255 -or $center.G -le $center.R -or $center.G -le $center.B) {
-        throw 'The source icon must preserve the green lightning-triangle center.'
+    if ($center.A -ne 255 -or $center.R -ne 0 -or $center.G -ne 251 -or $center.B -ne 141) {
+        throw 'The source icon mark must use the #00FB8D primary color.'
     }
 } finally {
     $sourceImage.Dispose()
