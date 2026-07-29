@@ -3,7 +3,12 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Join-Path $PSScriptRoot '..'
 $iconPath = Join-Path $projectRoot 'assets\AMacQ.ico'
 $converterPath = Join-Path $projectRoot 'tools\Convert-Icon.ps1'
+$sourceConverterPath = Join-Path $projectRoot 'tools\Convert-IconSource.ps1'
 $sourcePath = Join-Path $projectRoot 'assets\AMacQ-source.png'
+
+if (!(Test-Path -LiteralPath $sourceConverterPath)) {
+    throw 'The source icon converter is required.'
+}
 
 Remove-Item -LiteralPath $iconPath -Force -ErrorAction SilentlyContinue
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $converterPath -InputPath $sourcePath
@@ -27,15 +32,19 @@ try {
     if ($sourceImage.PixelFormat -ne [System.Drawing.Imaging.PixelFormat]::Format32bppArgb) {
         throw 'The source icon must use 32-bit ARGB pixels.'
     }
-    foreach ($corner in @(
-        [System.Drawing.Point]::new(0, 0),
-        [System.Drawing.Point]::new(255, 0),
-        [System.Drawing.Point]::new(0, 255),
-        [System.Drawing.Point]::new(255, 255)
-    )) {
-        if ($sourceImage.GetPixel($corner.X, $corner.Y).A -ne 0) {
-            throw 'The source icon corners must be transparent.'
-        }
+    $corner = $sourceImage.GetPixel(0, 0)
+    if ($corner.A -ne 0) {
+        throw 'The source icon corners must be transparent outside the rounded mask.'
+    }
+
+    $topCenter = $sourceImage.GetPixel(128, 8)
+    if ($topCenter.A -ne 255) {
+        throw 'The rounded mask must preserve the dark background and green border inside its top edge.'
+    }
+
+    $center = $sourceImage.GetPixel(128, 128)
+    if ($center.A -ne 255 -or $center.G -le $center.R -or $center.G -le $center.B) {
+        throw 'The source icon must preserve the green lightning-triangle center.'
     }
 } finally {
     $sourceImage.Dispose()
