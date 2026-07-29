@@ -415,17 +415,74 @@ function Build-FieldCards {
     }
 }
 
+if (!('NativeIcon' -as [type])) {
+    Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class NativeIcon
+{
+    public const uint RT_GROUP_ICON = 14;
+    public const uint IMAGE_ICON = 1;
+
+    public delegate bool EnumResNameProc(IntPtr hModule, IntPtr lpszType, IntPtr lpszName, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool EnumResourceNamesW(IntPtr hModule, IntPtr lpszType, EnumResNameProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr LoadImageW(IntPtr hInst, IntPtr name, uint type, int cx, int cy, uint fuLoad);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool DestroyIcon(IntPtr hIcon);
+
+    public static IntPtr GetFirstGroupIconId(IntPtr module)
+    {
+        IntPtr resourceId = IntPtr.Zero;
+        EnumResNameProc callback = (hModule, type, name, lParam) =>
+        {
+            resourceId = name;
+            return false;
+        };
+        EnumResourceNamesW(module, (IntPtr)RT_GROUP_ICON, callback, IntPtr.Zero);
+        GC.KeepAlive(callback);
+        return resourceId;
+    }
+}
+'@
+}
+
+function Get-EmbeddedApplicationIcon {
+    $assembly = [Reflection.Assembly]::GetEntryAssembly()
+    if (!$assembly) { return $null }
+
+    $module = [Runtime.InteropServices.Marshal]::GetHINSTANCE($assembly.ManifestModule)
+    $groupIconId = [NativeIcon]::GetFirstGroupIconId($module)
+    if ($groupIconId -eq [IntPtr]::Zero) { return $null }
+
+    $hIcon = [NativeIcon]::LoadImageW($module, $groupIconId, [NativeIcon]::IMAGE_ICON, 0, 0, 0)
+    if ($hIcon -eq [IntPtr]::Zero) { return $null }
+
+    try {
+        $image = [Windows.Interop.Imaging]::CreateBitmapSourceFromHIcon(
+            $hIcon,
+            [Windows.Int32Rect]::Empty,
+            [Windows.Media.Imaging.BitmapSizeOptions]::FromEmptyOptions())
+        $image.Freeze()
+        return $image
+    } finally {
+        [void][NativeIcon]::DestroyIcon($hIcon)
+    }
+}
+
 function Set-WindowIcon {
     param([Windows.Window]$Window)
 
     $executablePath = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
     if ([IO.Path]::GetExtension($executablePath) -eq '.exe') {
-        $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($executablePath)
-        if ($icon) {
-            $Window.Icon = [Windows.Interop.Imaging]::CreateBitmapSourceFromHIcon(
-                $icon.Handle,
-                [Windows.Int32Rect]::Empty,
-                [Windows.Media.Imaging.BitmapSizeOptions]::FromEmptyOptions())
+        $embeddedIcon = Get-EmbeddedApplicationIcon
+        if ($embeddedIcon) {
+            $Window.Icon = $embeddedIcon
             return
         }
     }

@@ -78,12 +78,15 @@ if ($appContent -notmatch 'function\s+Set-WindowIcon') {
     throw 'The application must provide a focused runtime window icon helper.'
 }
 
-if ($appContent -notmatch '\[Diagnostics\.Process\]::GetCurrentProcess\(\)\.MainModule\.FileName') {
-    throw 'The application must resolve its current executable path when running from the packaged application.'
+if ($appContent -notmatch 'function\s+Get-EmbeddedApplicationIcon' -or
+    $appContent -notmatch 'EnumResourceNamesW' -or
+    $appContent -notmatch 'LoadImageW' -or
+    $appContent -notmatch 'DestroyIcon') {
+    throw 'The application must directly load the EXE-embedded icon resource.'
 }
 
-if ($appContent -notmatch '\[System\.Drawing\.Icon\]::ExtractAssociatedIcon\(\$executablePath\)') {
-    throw 'The application must use the EXE-embedded icon when running from the packaged application.'
+if ($appContent -match 'ExtractAssociatedIcon') {
+    throw 'The packaged application must not use the Shell-associated icon cache.'
 }
 
 if ($appContent -notmatch '\$iconPath\s*=\s*Join-Path\s+\$PSScriptRoot\s+''assets\\AMacQ\.ico''') {

@@ -7,6 +7,34 @@ if ($content -notmatch 'x:Key="AppBackgroundBrush"') {
     throw 'A shared application background brush is required.'
 }
 
+foreach ($requiredSymbol in @(
+    'class NativeIcon',
+    'EnumResourceNamesW',
+    'LoadImageW',
+    'DestroyIcon',
+    'function Get-EmbeddedApplicationIcon',
+    '[Reflection.Assembly]::GetEntryAssembly()',
+    '[Runtime.InteropServices.Marshal]::GetHINSTANCE',
+    '[Windows.Interop.Imaging]::CreateBitmapSourceFromHIcon',
+    '$image.Freeze()'
+)) {
+    if (!$content.Contains($requiredSymbol)) {
+        throw "Direct embedded icon loading requires $requiredSymbol."
+    }
+}
+
+$embeddedIconStart = $content.IndexOf('function Get-EmbeddedApplicationIcon')
+$setWindowIconStart = $content.IndexOf('function Set-WindowIcon')
+$setWindowIconEnd = $content.IndexOf('# ================================================================', $setWindowIconStart)
+$embeddedIcon = $content.Substring($embeddedIconStart, $setWindowIconStart - $embeddedIconStart)
+$setWindowIcon = $content.Substring($setWindowIconStart, $setWindowIconEnd - $setWindowIconStart)
+if ($embeddedIcon -match 'ExtractAssociatedIcon' -or $setWindowIcon -match 'ExtractAssociatedIcon') {
+    throw 'Runtime application icon loading must not use Shell ExtractAssociatedIcon.'
+}
+if (!$setWindowIcon.Contains('Get-EmbeddedApplicationIcon')) {
+    throw 'The packaged application must use the direct embedded icon loader.'
+}
+
 foreach ($requiredColor in @(
     'x:Key="TextPrimaryColor"',
     'x:Key="TextBodyColor"',
