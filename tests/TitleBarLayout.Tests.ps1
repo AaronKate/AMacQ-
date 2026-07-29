@@ -7,6 +7,11 @@ if ($content -notmatch 'x:Key="AppBackgroundBrush"') {
     throw 'A shared application background brush is required.'
 }
 
+$browseButton = [regex]::Match($content, '<Button Name="BrowseBtn"[^>]+>')
+if (!$browseButton.Success -or $browseButton.Value -match '\.\.\.') {
+    throw 'The file selection button label must not include an ellipsis.'
+}
+
 foreach ($requiredSymbol in @(
     'class NativeIcon',
     'EnumResourceNamesW',

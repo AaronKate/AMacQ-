@@ -924,7 +924,7 @@ function Start-Gui {
                         Margin="6,0,0,20"/>
                 <Button Name="RefreshBtn" Grid.Column="1" Content="刷新" Style="{StaticResource SidebarButton}"
                         Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Padding="8,6" Margin="0,0,0,14"/>
-               <Button Name="BrowseBtn" Grid.Column="2" Content="选择文件..." Style="{StaticResource SidebarButton}"
+               <Button Name="BrowseBtn" Grid.Column="2" Content="选择文件" Style="{StaticResource SidebarButton}"
                         Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Padding="8,6" Margin="0,0,0,14"/>
         </Grid>
 
