@@ -37,6 +37,10 @@ try {
         throw 'The source icon corners must be transparent outside the rounded mask.'
     }
 
+    if ($sourceImage.GetPixel(16, 16).A -ne 0) {
+        throw 'The source icon must retain a visibly rounded mask at taskbar sizes.'
+    }
+
     $topCenter = $sourceImage.GetPixel(128, 8)
     if ($topCenter.A -ne 255) {
         throw 'The rounded mask must preserve the dark background and green border inside its top edge.'
