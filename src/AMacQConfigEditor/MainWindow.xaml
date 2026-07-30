@@ -4,14 +4,14 @@
         Title="AMacQ Configuration Editor" Height="600" Width="860"
         MinHeight="520" MinWidth="760" WindowStartupLocation="CenterScreen"
         WindowStyle="None" ResizeMode="CanResize"
-        Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
+        Background="Transparent" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
     <!-- Theme palette: change only these Color resources to retheme the application. -->
-    <Color x:Key="SurfaceAppStartColor">#263B68</Color>
-    <Color x:Key="SurfaceAppEndColor">#090E20</Color>
+    <Color x:Key="SurfaceAppStartColor">#B8263B68</Color>
+    <Color x:Key="SurfaceAppEndColor">#B8090E20</Color>
     <Color x:Key="AuroraGlowStartColor">#3022D3EE</Color>
     <Color x:Key="AuroraGlowMiddleColor">#1022D3EE</Color>
     <Color x:Key="AuroraGlowEndColor">#0022D3EE</Color>
