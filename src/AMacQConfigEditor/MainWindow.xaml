@@ -73,11 +73,6 @@
       <GradientStop Color="{StaticResource SurfaceAppStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfaceAppEndColor}" Offset="1"/>
     </LinearGradientBrush>
-    <RadialGradientBrush x:Key="AuroraGlowBrush" Center="0.12,0.08" GradientOrigin="0.12,0.08" RadiusX="0.78" RadiusY="0.70">
-      <GradientStop Color="{StaticResource AuroraGlowStartColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource AuroraGlowMiddleColor}" Offset="0.38"/>
-      <GradientStop Color="{StaticResource AuroraGlowEndColor}" Offset="1"/>
-    </RadialGradientBrush>
     <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,0">
       <GradientStop Color="{StaticResource AccentCyanColor}" Offset="0"/>
       <GradientStop Color="{StaticResource AccentIndigoColor}" Offset="1"/>
@@ -369,17 +364,24 @@
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
-    <Border x:Name="AuroraGlowLayer" Grid.RowSpan="2" Background="{StaticResource AuroraGlowBrush}" IsHitTestVisible="False">
+    <Border x:Name="AuroraGlowLayer" Grid.RowSpan="2" IsHitTestVisible="False">
+      <Border.Background>
+        <RadialGradientBrush Center="0.12,0.08" GradientOrigin="0.12,0.08" RadiusX="0.82" RadiusY="0.74">
+          <GradientStop Color="#8A22D3EE" Offset="0"/>
+          <GradientStop Color="#322C7CFF" Offset="0.42"/>
+          <GradientStop Color="#0022D3EE" Offset="1"/>
+        </RadialGradientBrush>
+      </Border.Background>
       <Border.Triggers>
         <EventTrigger RoutedEvent="FrameworkElement.Loaded">
           <BeginStoryboard>
             <Storyboard>
               <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.Center)"
                               From="0.12,0.08" To="0.84,0.24"
-                              Duration="0:0:22" AutoReverse="True" RepeatBehavior="Forever" />
+                              Duration="0:0:12" AutoReverse="True" RepeatBehavior="Forever" />
               <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.GradientOrigin)"
                               From="0.12,0.08" To="0.76,0.18"
-                              Duration="0:0:22" AutoReverse="True" RepeatBehavior="Forever" />
+                              Duration="0:0:12" AutoReverse="True" RepeatBehavior="Forever" />
             </Storyboard>
           </BeginStoryboard>
         </EventTrigger>
@@ -536,5 +538,28 @@
       </Border>
     </Grid>
     </Grid>
+    <Border x:Name="AuroraOverlayLayer" Grid.RowSpan="2" Panel.ZIndex="10" IsHitTestVisible="False" Opacity="0.78">
+      <Border.Background>
+        <RadialGradientBrush Center="0.78,0.22" GradientOrigin="0.78,0.22" RadiusX="0.62" RadiusY="0.60">
+          <GradientStop Color="#6836E8FF" Offset="0"/>
+          <GradientStop Color="#2422D3EE" Offset="0.44"/>
+          <GradientStop Color="#0036E8FF" Offset="1"/>
+        </RadialGradientBrush>
+      </Border.Background>
+      <Border.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.Center)"
+                              From="0.78,0.22" To="0.18,0.76"
+                              Duration="0:0:9" AutoReverse="True" RepeatBehavior="Forever" />
+              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.GradientOrigin)"
+                              From="0.78,0.22" To="0.24,0.70"
+                              Duration="0:0:9" AutoReverse="True" RepeatBehavior="Forever" />
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Border.Triggers>
+    </Border>
   </Grid>
 </Window>
