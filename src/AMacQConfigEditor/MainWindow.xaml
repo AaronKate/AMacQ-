@@ -3,15 +3,15 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="AMacQ Configuration Editor" Height="600" Width="860"
         MinHeight="520" MinWidth="760" WindowStartupLocation="CenterScreen"
-        WindowStyle="None" ResizeMode="CanResize"
+        WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="True"
         Background="Transparent" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
     <!-- Theme palette: change only these Color resources to retheme the application. -->
-    <Color x:Key="SurfaceAppStartColor">#8C263B68</Color>
-    <Color x:Key="SurfaceAppEndColor">#8C090E20</Color>
+    <Color x:Key="SurfaceAppStartColor">#6E263B68</Color>
+    <Color x:Key="SurfaceAppEndColor">#6E090E20</Color>
     <Color x:Key="AuroraGlowStartColor">#3022D3EE</Color>
     <Color x:Key="AuroraGlowMiddleColor">#1022D3EE</Color>
     <Color x:Key="AuroraGlowEndColor">#0022D3EE</Color>
@@ -77,7 +77,7 @@
       <GradientStop Color="{StaticResource AccentCyanColor}" Offset="0"/>
       <GradientStop Color="{StaticResource AccentIndigoColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="SidebarSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.72">
+    <LinearGradientBrush x:Key="SidebarSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.62">
       <GradientStop Color="{StaticResource SurfaceSidebarStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfaceSidebarEndColor}" Offset="1"/>
     </LinearGradientBrush>
@@ -85,7 +85,7 @@
       <GradientStop Color="{StaticResource SurfaceContentStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfaceContentEndColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="PanelSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.54">
+    <LinearGradientBrush x:Key="PanelSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.46">
       <GradientStop Color="{StaticResource SurfacePanelStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfacePanelEndColor}" Offset="1"/>
     </LinearGradientBrush>

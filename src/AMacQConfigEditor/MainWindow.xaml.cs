@@ -9,7 +9,6 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using AMacQConfigEditor.ViewModels;
-using AMacQConfigEditor.Services;
 using Microsoft.Win32;
 
 namespace AMacQConfigEditor;
@@ -25,7 +24,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        SystemBackdropService.Apply(this);
         DataContext = _viewModel;
         SetWindowIcon();
 
