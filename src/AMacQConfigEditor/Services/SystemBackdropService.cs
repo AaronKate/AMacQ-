@@ -24,6 +24,8 @@ internal static class SystemBackdropService
 
         try
         {
+            var margins = new MARGINS { cxLeftWidth = -1 };
+            _ = DwmExtendFrameIntoClientArea(windowHandle, ref margins);
             if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000) && TryEnableMica(windowHandle)) return;
             EnableAcrylic(windowHandle);
         }
@@ -72,6 +74,9 @@ internal static class SystemBackdropService
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
 
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
@@ -91,5 +96,14 @@ internal static class SystemBackdropService
         public int Attribute;
         public IntPtr Data;
         public int SizeOfData;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MARGINS
+    {
+        public int cxLeftWidth;
+        public int cxRightWidth;
+        public int cyTopHeight;
+        public int cyBottomHeight;
     }
 }
