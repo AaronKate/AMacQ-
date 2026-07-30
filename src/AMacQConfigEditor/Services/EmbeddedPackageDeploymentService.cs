@@ -19,8 +19,12 @@ internal static class EmbeddedPackageDeploymentService
             ?? throw new InvalidOperationException("未找到内置压缩包资源。");
         using var archive = new ZipArchive(resource, ZipArchiveMode.Read);
 
-        var packageEntries = archive.Entries
-            .Select(entry => new PackageEntry(entry, GetRelativePath(entry.FullName)))
+        var entryPaths = archive.Entries
+            .Select(entry => new ArchiveEntryPath(entry, SplitPath(entry.FullName)))
+            .ToArray();
+        var removeWrapperFolder = HasSingleWrapperFolder(entryPaths);
+        var packageEntries = entryPaths
+            .Select(item => new PackageEntry(item.Entry, GetRelativePath(item.PathParts, removeWrapperFolder)))
             .Where(item => item.RelativePath.Length > 0)
             .ToArray();
         var targets = packageEntries
@@ -52,11 +56,19 @@ internal static class EmbeddedPackageDeploymentService
         return new PackageDeploymentResult(extracted, skipped);
     }
 
-    private static string[] GetRelativePath(string entryPath)
+    private static bool HasSingleWrapperFolder(IReadOnlyList<ArchiveEntryPath> entryPaths)
     {
-        var parts = entryPath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length <= 1 ? [] : parts[1..];
+        var filePaths = entryPaths.Where(item => item.Entry.Name.Length > 0).Select(item => item.PathParts).ToArray();
+        return filePaths.Length > 0
+            && filePaths.All(path => path.Length > 1)
+            && filePaths.Select(path => path[0]).Distinct(StringComparer.OrdinalIgnoreCase).Count() == 1;
     }
+
+    private static string[] GetRelativePath(string[] pathParts, bool removeWrapperFolder) =>
+        removeWrapperFolder && pathParts.Length > 1 ? pathParts[1..] : pathParts;
+
+    private static string[] SplitPath(string entryPath) =>
+        entryPath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
 
     private static string GetSafePath(string rootWithSeparator, IReadOnlyList<string> pathParts)
     {
@@ -70,6 +82,7 @@ internal static class EmbeddedPackageDeploymentService
     }
 
     private sealed record PackageEntry(ZipArchiveEntry Entry, string[] RelativePath);
+    private sealed record ArchiveEntryPath(ZipArchiveEntry Entry, string[] PathParts);
 }
 
 internal sealed record PackageDeploymentResult(IReadOnlyList<string> ExtractedTargets, IReadOnlyList<string> SkippedTargets)
