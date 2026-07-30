@@ -21,6 +21,8 @@ public partial class MainWindow : Window
     private string? _keyBindingsPath;
     private string? _sensitivityPath;
     private readonly DispatcherTimer _saveResetTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+    private readonly DispatcherTimer _weaponSearchTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private string _weaponSearchPrefix = string.Empty;
 
     public MainWindow()
     {
@@ -34,12 +36,14 @@ public partial class MainWindow : Window
         MinimizeBtn.Click += (_, _) => WindowState = WindowState.Minimized;
         CloseBtn.Click += (_, _) => Close();
         WeaponList.SelectionChanged += (_, _) => SelectWeapon();
+        WeaponList.PreviewTextInput += (_, args) => FindWeaponByPrefix(args);
         WeaponList.ItemContainerStyle = (Style)FindResource("WeaponListItem");
 
         BuildFieldCards();
         PopulateGlobalOptions();
         LoadDefaultFilesIfAvailable();
         _saveResetTimer.Tick += (_, _) => { SaveBtn.Content = "应用"; _saveResetTimer.Stop(); };
+        _weaponSearchTimer.Tick += (_, _) => { _weaponSearchPrefix = string.Empty; _weaponSearchTimer.Stop(); };
     }
 
     private async void DeployEmbeddedPackage()
@@ -101,6 +105,31 @@ public partial class MainWindow : Window
         RefreshKeyOptions();
         SelectedLabel.Text = "当前枪械：";
         SelectedWeaponLabel.Text = weapon.Name;
+    }
+
+    private void FindWeaponByPrefix(TextCompositionEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Text)) return;
+
+        _weaponSearchPrefix += args.Text;
+        var matchedWeapon = WeaponList.Items.OfType<WeaponListItem>()
+            .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
+        if (matchedWeapon is null)
+        {
+            _weaponSearchPrefix = args.Text;
+            matchedWeapon = WeaponList.Items.OfType<WeaponListItem>()
+                .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (matchedWeapon is not null)
+        {
+            WeaponList.SelectedItem = matchedWeapon;
+            WeaponList.ScrollIntoView(matchedWeapon);
+        }
+
+        _weaponSearchTimer.Stop();
+        _weaponSearchTimer.Start();
+        args.Handled = true;
     }
 
     private void BuildFieldCards()
