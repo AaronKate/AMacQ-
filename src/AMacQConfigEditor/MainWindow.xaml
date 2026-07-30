@@ -369,7 +369,22 @@
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
-    <Border Grid.RowSpan="2" Background="{StaticResource AuroraGlowBrush}" IsHitTestVisible="False"/>
+    <Border x:Name="AuroraGlowLayer" Grid.RowSpan="2" Background="{StaticResource AuroraGlowBrush}" IsHitTestVisible="False">
+      <Border.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.Center)"
+                              From="0.12,0.08" To="0.84,0.24"
+                              Duration="0:0:22" AutoReverse="True" RepeatBehavior="Forever" />
+              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.GradientOrigin)"
+                              From="0.12,0.08" To="0.76,0.18"
+                              Duration="0:0:22" AutoReverse="True" RepeatBehavior="Forever" />
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Border.Triggers>
+    </Border>
 
     <Grid Name="TitleBar" Grid.Row="0">
       <Grid.ColumnDefinitions>
