@@ -415,19 +415,15 @@
                   BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,14">
             <Grid>
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
               </Grid.ColumnDefinitions>
-              <Border Width="28" Height="28" CornerRadius="6" Background="{StaticResource AccentGradientBrush}" VerticalAlignment="Center">
-                <TextBlock Text="↓" Foreground="{DynamicResource AccentForegroundBrush}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              </Border>
-              <StackPanel Grid.Column="1" Margin="8,0,8,0" VerticalAlignment="Center">
+              <StackPanel Margin="0,0,8,0" VerticalAlignment="Center">
                 <TextBlock Text="资源部署状态" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}"/>
                 <TextBlock Name="DeploymentStatusText" Text="资源包可部署" FontSize="11" FontWeight="SemiBold"
                            Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
               </StackPanel>
-              <Button Name="DecompressBtn" Grid.Column="2" Content="↓" ToolTip="一键部署" Style="{StaticResource PrimaryButton}"
+              <Button Name="DecompressBtn" Grid.Column="1" Content="↓" ToolTip="一键部署" Style="{StaticResource PrimaryButton}"
                       Background="{StaticResource AccentGradientBrush}" Foreground="{DynamicResource AccentForegroundBrush}"
                       FontSize="18" FontWeight="SemiBold" Width="32" Height="30" Padding="0" VerticalAlignment="Center"/>
             </Grid>
