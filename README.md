@@ -15,6 +15,8 @@
 - .NET 10 SDK
 - Visual Studio：安装“使用 .NET 的桌面开发”工作负载，并确保已安装 .NET 10 SDK
 
+发布给其他电脑运行时，目标电脑还需要安装 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)（Windows x64）。
+
 双击根目录的 `AMacQ配置编辑器.sln`，即可在 Visual Studio 中打开解决方案。
 
 ## 项目结构
@@ -46,13 +48,13 @@ dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 .\Build-WpfRelease.ps1
 ```
 
-脚本会发布 Windows x64 的自包含单文件程序，输出到：
+脚本会发布 Windows x64 的框架依赖单文件程序，输出到：
 
 ```text
 dist\wpf\AMacQConfigEditor.exe
 ```
 
-也可以在 Visual Studio 中右键 WPF 项目，选择“发布”，再使用 `FolderProfile` 配置。该配置已启用自包含、单文件和原生库自解压选项。
+也可以在 Visual Studio 中右键 WPF 项目，选择“发布”，再使用 `FolderProfile` 配置。该配置已启用框架依赖和单文件选项。
 
 ## 主要功能
 

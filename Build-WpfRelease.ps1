@@ -6,9 +6,8 @@ $outputPath = Join-Path $PSScriptRoot 'dist\wpf'
 dotnet publish $projectPath `
     --configuration Release `
     --runtime win-x64 `
-    --self-contained true `
+    --self-contained false `
     --property:PublishSingleFile=true `
-    --property:IncludeNativeLibrariesForSelfExtract=true `
     --property:IncludeAllContentForSelfExtract=true `
     --property:DebugType=None `
     --property:DebugSymbols=false `
