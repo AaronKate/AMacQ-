@@ -3,15 +3,15 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="AMacQ Configuration Editor" Height="600" Width="860"
         MinHeight="520" MinWidth="760" WindowStartupLocation="CenterScreen"
-        WindowStyle="None" ResizeMode="CanResize" AllowsTransparency="True"
-        Background="Transparent" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
+        WindowStyle="None" ResizeMode="CanResize"
+        Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
     <!-- Theme palette: change only these Color resources to retheme the application. -->
-    <Color x:Key="SurfaceAppStartColor">#6E263B68</Color>
-    <Color x:Key="SurfaceAppEndColor">#6E090E20</Color>
+    <Color x:Key="SurfaceAppStartColor">#172D4A</Color>
+    <Color x:Key="SurfaceAppEndColor">#091421</Color>
     <Color x:Key="AuroraGlowStartColor">#3022D3EE</Color>
     <Color x:Key="AuroraGlowMiddleColor">#1022D3EE</Color>
     <Color x:Key="AuroraGlowEndColor">#0022D3EE</Color>
@@ -73,23 +73,27 @@
       <GradientStop Color="{StaticResource SurfaceAppStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfaceAppEndColor}" Offset="1"/>
     </LinearGradientBrush>
+    <LinearGradientBrush x:Key="TitleBarSurfaceBrush" StartPoint="0,0" EndPoint="1,0" Opacity="0.88">
+      <GradientStop Color="#1F4268" Offset="0"/>
+      <GradientStop Color="#10233B" Offset="1"/>
+    </LinearGradientBrush>
     <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,0">
       <GradientStop Color="{StaticResource AccentCyanColor}" Offset="0"/>
       <GradientStop Color="{StaticResource AccentIndigoColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="SidebarSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.62">
+    <LinearGradientBrush x:Key="SidebarSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.84">
       <GradientStop Color="{StaticResource SurfaceSidebarStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfaceSidebarEndColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="ContentSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.26">
+    <LinearGradientBrush x:Key="ContentSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.46">
       <GradientStop Color="{StaticResource SurfaceContentStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfaceContentEndColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="PanelSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.46">
+    <LinearGradientBrush x:Key="PanelSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.76">
       <GradientStop Color="{StaticResource SurfacePanelStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfacePanelEndColor}" Offset="1"/>
     </LinearGradientBrush>
-    <LinearGradientBrush x:Key="InputSurfaceBrush" StartPoint="0,0" EndPoint="1,1">
+    <LinearGradientBrush x:Key="InputSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.88">
       <GradientStop Color="{StaticResource SurfaceInputStartColor}" Offset="0"/>
       <GradientStop Color="{StaticResource SurfaceInputEndColor}" Offset="1"/>
     </LinearGradientBrush>
@@ -388,7 +392,7 @@
       </Border.Triggers>
     </Border>
 
-    <Grid Name="TitleBar" Grid.Row="0">
+    <Grid Name="TitleBar" Grid.Row="0" Background="{StaticResource TitleBarSurfaceBrush}">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="220"/>
         <ColumnDefinition Width="*"/>
