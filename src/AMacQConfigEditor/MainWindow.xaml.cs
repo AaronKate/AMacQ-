@@ -10,7 +10,6 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using AMacQConfigEditor.Services;
 using AMacQConfigEditor.ViewModels;
-using Microsoft.Win32;
 
 namespace AMacQConfigEditor;
 
@@ -29,8 +28,7 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
         SetWindowIcon();
 
-        BrowseBtn.Click += (_, _) => BrowseFiles();
-        RefreshBtn.Click += (_, _) => ReloadFiles();
+        DecompressBtn.Click += (_, _) => DeployEmbeddedPackage();
         SaveBtn.Click += (_, _) => SaveChanges();
         MinimizeBtn.Click += (_, _) => WindowState = WindowState.Minimized;
         CloseBtn.Click += (_, _) => Close();
@@ -39,24 +37,34 @@ public partial class MainWindow : Window
 
         BuildFieldCards();
         PopulateGlobalOptions();
+        LoadDefaultFilesIfAvailable();
         _saveResetTimer.Tick += (_, _) => { SaveBtn.Content = "应用"; _saveResetTimer.Stop(); };
     }
 
-    private void BrowseFiles()
+    private void DeployEmbeddedPackage()
     {
-        var bindingsDialog = new OpenFileDialog { Title = "选择第一个配置文件（按键配置）", Filter = "Lua 文件 (*.lua)|*.lua|所有文件 (*.*)|*.*" };
-        if (bindingsDialog.ShowDialog() != true) return;
-        var sensitivityDialog = new OpenFileDialog { Title = "选择第二个配置文件（灵敏度配置）", Filter = bindingsDialog.Filter, InitialDirectory = Path.GetDirectoryName(bindingsDialog.FileName) };
-        if (sensitivityDialog.ShowDialog() != true) return;
-
-        _keyBindingsPath = bindingsDialog.FileName;
-        _sensitivityPath = sensitivityDialog.FileName;
-        LoadFiles();
+        try
+        {
+            DecompressBtn.IsEnabled = false;
+            var result = EmbeddedPackageDeploymentService.Deploy(@"C:\");
+            LoadDefaultFilesIfAvailable();
+            MessageBox.Show(result.ToDisplayMessage(), "解压完成", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "解压失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            DecompressBtn.IsEnabled = true;
+        }
     }
 
-    private void ReloadFiles()
+    private void LoadDefaultFilesIfAvailable()
     {
-        if (_keyBindingsPath is null || _sensitivityPath is null) BrowseFiles(); else LoadFiles();
+        _keyBindingsPath = @"C:\AMacQ1156777787\sorinkg.lua";
+        _sensitivityPath = @"C:\AMacQ1156777787\sorinxs.lua";
+        if (File.Exists(_keyBindingsPath) && File.Exists(_sensitivityPath)) LoadFiles();
     }
 
     private void LoadFiles()
