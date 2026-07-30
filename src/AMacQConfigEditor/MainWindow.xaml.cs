@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -41,17 +42,22 @@ public partial class MainWindow : Window
         _saveResetTimer.Tick += (_, _) => { SaveBtn.Content = "应用"; _saveResetTimer.Stop(); };
     }
 
-    private void DeployEmbeddedPackage()
+    private async void DeployEmbeddedPackage()
     {
         try
         {
             DecompressBtn.IsEnabled = false;
-            var result = EmbeddedPackageDeploymentService.Deploy(@"C:\");
+            DeploymentStatusText.Text = "正在解压资源包…";
+            var result = await Task.Run(() => EmbeddedPackageDeploymentService.Deploy(@"C:\"));
             LoadDefaultFilesIfAvailable();
-            MessageBox.Show(result.ToDisplayMessage(), "解压完成", MessageBoxButton.OK, MessageBoxImage.Information);
+            DeploymentStatusText.Text = result.ExtractedTargets.Count > 0
+                ? "部署完成，已就绪"
+                : "已检查，资源已存在";
+            MessageBox.Show(result.ToDisplayMessage(), "部署完成", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception exception)
         {
+            DeploymentStatusText.Text = "部署失败，请检查权限";
             MessageBox.Show(exception.Message, "解压失败", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally

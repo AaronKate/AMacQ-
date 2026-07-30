@@ -399,6 +399,10 @@
         </Grid.RowDefinitions>
 
         <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
@@ -406,9 +410,27 @@
           </Grid.ColumnDefinitions>
              <TextBlock Name="TitleLabel" Text="AMacQ"
                         FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AccentGradientBrush}"
-                        Margin="6,0,0,20"/>
-                <Button Name="DecompressBtn" Grid.Column="1" Grid.ColumnSpan="2" Content="解压" Style="{StaticResource SidebarButton}"
-                        Foreground="{DynamicResource PrimaryTextBrush}" FontSize="12" Padding="8,6" Margin="0,0,0,14"/>
+                        Margin="6,0,0,10"/>
+          <Border Name="DeploymentCard" Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource InputSurfaceBrush}"
+                  BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,14">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <Border Width="28" Height="28" CornerRadius="6" Background="{StaticResource AccentGradientBrush}" VerticalAlignment="Center">
+                <TextBlock Text="↓" Foreground="{DynamicResource AccentForegroundBrush}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+              </Border>
+              <StackPanel Grid.Column="1" Margin="8,0,8,0" VerticalAlignment="Center">
+                <TextBlock Text="Sorin 24.1 S10" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                <TextBlock Name="DeploymentStatusText" Text="资源包可部署" FontSize="10" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,2,0,0"/>
+              </StackPanel>
+              <Button Name="DecompressBtn" Grid.Column="2" Content="一键部署" Style="{StaticResource PrimaryButton}"
+                      Background="{StaticResource AccentGradientBrush}" Foreground="{DynamicResource AccentForegroundBrush}"
+                      FontSize="11" FontWeight="SemiBold" Padding="10,5" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
         </Grid>
 
         <StackPanel Grid.Row="1">
