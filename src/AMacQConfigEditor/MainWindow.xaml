@@ -4,7 +4,8 @@
         Title="AMacQ Configuration Editor" Height="600" Width="860"
         MinHeight="520" MinWidth="760" WindowStartupLocation="CenterScreen"
         WindowStyle="None" ResizeMode="CanResize"
-        Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
+        Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI"
+        Cursor="None" MouseMove="Window_MouseMove" MouseLeave="Window_MouseLeave">
   <shell:WindowChrome.WindowChrome>
     <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
@@ -353,7 +354,7 @@
       </Setter>
     </Style>
   </Window.Resources>
-  <Grid Background="{DynamicResource AppBackgroundBrush}">
+  <Grid Name="RootLayout" Background="{DynamicResource AppBackgroundBrush}">
     <Grid.RowDefinitions>
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
@@ -525,5 +526,13 @@
       </Border>
     </Grid>
     </Grid>
+    <Canvas Name="CursorOverlay" Grid.RowSpan="2" Panel.ZIndex="1000" IsHitTestVisible="False" Visibility="Collapsed">
+      <Path Data="M 1,0 L 1,18 L 6,13 L 10,21 L 13,19 L 8,11 L 16,11 Z"
+            Fill="#FFF8FCFF" Stroke="#FF06111F" StrokeThickness="2" StrokeLineJoin="Round">
+        <Path.RenderTransform>
+          <TranslateTransform x:Name="CursorTransform"/>
+        </Path.RenderTransform>
+      </Path>
+    </Canvas>
   </Grid>
 </Window>

@@ -77,6 +77,19 @@ public partial class MainWindow : Window
         if (File.Exists(_keyBindingsPath) && File.Exists(_sensitivityPath)) LoadFiles();
     }
 
+    private void Window_MouseMove(object sender, MouseEventArgs args)
+    {
+        var position = args.GetPosition(RootLayout);
+        CursorTransform.X = position.X;
+        CursorTransform.Y = position.Y;
+        CursorOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void Window_MouseLeave(object sender, MouseEventArgs args)
+    {
+        CursorOverlay.Visibility = Visibility.Collapsed;
+    }
+
     private void LoadFiles()
     {
         var result = _viewModel.Load(_keyBindingsPath!, _sensitivityPath!);
