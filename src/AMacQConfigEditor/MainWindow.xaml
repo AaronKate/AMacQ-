@@ -538,6 +538,29 @@
       </Border>
     </Grid>
     </Grid>
+    <Border x:Name="AuroraMistLayer" Grid.RowSpan="2" Panel.ZIndex="9" IsHitTestVisible="False" Opacity="0.64">
+      <Border.Background>
+        <RadialGradientBrush Center="0.22,0.72" GradientOrigin="0.22,0.72" RadiusX="0.58" RadiusY="0.54">
+          <GradientStop Color="#5A31E8C5" Offset="0"/>
+          <GradientStop Color="#1D25BFE5" Offset="0.46"/>
+          <GradientStop Color="#0025BFE5" Offset="1"/>
+        </RadialGradientBrush>
+      </Border.Background>
+      <Border.Triggers>
+        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+          <BeginStoryboard>
+            <Storyboard>
+              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.Center)"
+                              From="0.22,0.72" To="0.80,0.18"
+                              Duration="0:0:16" AutoReverse="True" RepeatBehavior="Forever" />
+              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.GradientOrigin)"
+                              From="0.22,0.72" To="0.72,0.24"
+                              Duration="0:0:16" AutoReverse="True" RepeatBehavior="Forever" />
+            </Storyboard>
+          </BeginStoryboard>
+        </EventTrigger>
+      </Border.Triggers>
+    </Border>
     <Border x:Name="AuroraOverlayLayer" Grid.RowSpan="2" Panel.ZIndex="10" IsHitTestVisible="False" Opacity="0.78">
       <Border.Background>
         <RadialGradientBrush Center="0.78,0.22" GradientOrigin="0.78,0.22" RadiusX="0.62" RadiusY="0.60">
