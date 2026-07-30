@@ -63,6 +63,37 @@
       <GradientStop Color="{DynamicResource SurfaceAppStartColor}" Offset="0"/>
       <GradientStop Color="{DynamicResource SurfaceAppEndColor}" Offset="1"/>
     </LinearGradientBrush>
+    <!-- A shared static scene: glass layers blur this scene instead of relying on system Acrylic/Mica. -->
+    <DrawingBrush x:Key="FrostedBackdropBrush" Viewbox="0,0,1,1" ViewboxUnits="Absolute" Stretch="Fill">
+      <DrawingBrush.Drawing>
+        <DrawingGroup>
+          <GeometryDrawing Geometry="M 0,0 L 1,0 1,1 0,1 Z">
+            <GeometryDrawing.Brush>
+              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="{DynamicResource SurfaceAppStartColor}" Offset="0"/>
+                <GradientStop Color="{DynamicResource SurfaceAppEndColor}" Offset="1"/>
+              </LinearGradientBrush>
+            </GeometryDrawing.Brush>
+          </GeometryDrawing>
+          <GeometryDrawing Geometry="M 0.04,0.02 A 0.34,0.34 0 1 1 0.05,0.02 Z">
+            <GeometryDrawing.Brush>
+              <RadialGradientBrush Opacity="0.72">
+                <GradientStop Color="{DynamicResource AccentCyanColor}" Offset="0"/>
+                <GradientStop Color="#00FFFFFF" Offset="1"/>
+              </RadialGradientBrush>
+            </GeometryDrawing.Brush>
+          </GeometryDrawing>
+          <GeometryDrawing Geometry="M 0.72,0.45 A 0.30,0.30 0 1 1 0.73,0.45 Z">
+            <GeometryDrawing.Brush>
+              <RadialGradientBrush Opacity="0.54">
+                <GradientStop Color="{DynamicResource AccentIndigoColor}" Offset="0"/>
+                <GradientStop Color="#00FFFFFF" Offset="1"/>
+              </RadialGradientBrush>
+            </GeometryDrawing.Brush>
+          </GeometryDrawing>
+        </DrawingGroup>
+      </DrawingBrush.Drawing>
+    </DrawingBrush>
     <LinearGradientBrush x:Key="TitleBarSurfaceBrush" StartPoint="0,0" EndPoint="1,0" Opacity="0.88">
       <GradientStop Color="{DynamicResource SurfaceTitleStartColor}" Offset="0"/>
       <GradientStop Color="{DynamicResource SurfaceTitleEndColor}" Offset="1"/>
@@ -358,11 +389,19 @@
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
-    <Grid Name="TitleBar" Grid.Row="0" Background="{DynamicResource TitleBarSurfaceBrush}">
+    <Grid Name="ThemeBackdrop" Grid.RowSpan="2" IsHitTestVisible="False" ClipToBounds="True">
+      <Rectangle Fill="{DynamicResource FrostedBackdropBrush}"/>
+    </Grid>
+    <Grid Name="TitleBar" Grid.Row="0" Background="Transparent" ClipToBounds="True">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="220"/>
         <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
+
+      <Border Name="TitleBarGlass" Grid.ColumnSpan="2" Background="{DynamicResource FrostedBackdropBrush}" Opacity="0.72" IsHitTestVisible="False">
+        <Border.Effect><BlurEffect Radius="20"/></Border.Effect>
+      </Border>
+      <Border Grid.ColumnSpan="2" Background="{DynamicResource TitleBarSurfaceBrush}" IsHitTestVisible="False"/>
 
       <Border Background="Transparent">
         <StackPanel Orientation="Horizontal">
@@ -389,8 +428,13 @@
       </Grid.ColumnDefinitions>
 
     <!-- macOS System Settings-style navigation sidebar -->
-    <Border Name="SidebarPanel" Grid.Column="0" Background="{DynamicResource SidebarSurfaceBrush}"
+    <Border Name="SidebarPanel" Grid.Column="0" Background="Transparent"
             BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
+      <Grid ClipToBounds="True">
+        <Border Name="SidebarGlass" Background="{DynamicResource FrostedBackdropBrush}" Opacity="0.74" IsHitTestVisible="False">
+          <Border.Effect><BlurEffect Radius="20"/></Border.Effect>
+        </Border>
+        <Border Background="{DynamicResource SidebarSurfaceBrush}" IsHitTestVisible="False"/>
       <Grid Margin="14,20,14,16">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
@@ -437,16 +481,21 @@
           </Border>
         </Grid>
       </Grid>
+      </Grid>
     </Border>
 
     <!-- Detail page -->
-    <Grid Name="ContentPanel" Grid.Column="1" Background="{DynamicResource ContentSurfaceBrush}">
+    <Grid Name="ContentPanel" Grid.Column="1" Background="Transparent" ClipToBounds="True">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="*"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
+      <Border Name="ContentGlass" Grid.RowSpan="4" Background="{DynamicResource FrostedBackdropBrush}" Opacity="0.66" IsHitTestVisible="False">
+        <Border.Effect><BlurEffect Radius="20"/></Border.Effect>
+      </Border>
+      <Border Grid.RowSpan="4" Background="{DynamicResource ContentSurfaceBrush}" IsHitTestVisible="False"/>
 
       <Border BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,0,1" Padding="32,22,32,20">
            <StackPanel>
