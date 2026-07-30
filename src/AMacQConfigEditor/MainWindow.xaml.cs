@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
+using AMacQConfigEditor.Services;
 using AMacQConfigEditor.ViewModels;
 using Microsoft.Win32;
 
@@ -24,6 +25,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        TechnologyThemeService.ApplyRandomTheme(this);
         DataContext = _viewModel;
         SetWindowIcon();
 

@@ -25,7 +25,7 @@
 | --- | --- |
 | `AMacQ配置编辑器.sln` | Visual Studio 解决方案 |
 | `src/AMacQConfigEditor` | WPF 主项目 |
-| `src/AMacQConfigEditor/MainWindow.xaml` | 窗口布局、主题资源及全窗口极光背景动画 |
+| `src/AMacQConfigEditor/MainWindow.xaml` | 窗口布局、磨砂主题资源与控件样式 |
 | `src/AMacQConfigEditor/Services` | Lua 读取、文件编码与原子写入服务 |
 | `src/AMacQConfigEditor/ViewModels` | 配置编辑状态与界面数据绑定 |
 | `assets/AMacQ.ico` | 应用、任务栏和窗口图标 |
@@ -65,8 +65,8 @@ dist\wpf\AMacQConfigEditor.exe
 - 设置触发方式与灵敏度增幅激活键
 - 保存时保留原文件编码、尽量保留 Lua 内容格式，并通过临时文件原子替换写入
 - 敏感度输入仅允许非负整数或最多两位小数，支持方向键以 `0.01` 调整
-- 深色主题全窗口背景包含纯 XAML 的三层极光流体动画：9、12、16 秒的紫蓝与青绿色光晕以不同方向缓慢往返；覆盖层不拦截鼠标操作，也不影响编辑和保存逻辑
-- 深海蓝仿磨砂主题使用分层的半透明渐变、柔和高光边框与三层极光动画，形成稳定的玻璃卡片层次；不依赖桌面透明或系统材质支持
+- 每次启动时随机选择一套固定科技主题：深海青蓝、量子紫电、碳纤琥珀或矩阵翡翠
+- 各主题均使用分层半透明渐变、柔和高光边框与静态玻璃卡片层次；不依赖桌面透明或系统材质支持，也不包含流光动画
 
 ## 配置文件使用
 

@@ -12,9 +12,8 @@
     <!-- Theme palette: change only these Color resources to retheme the application. -->
     <Color x:Key="SurfaceAppStartColor">#172D4A</Color>
     <Color x:Key="SurfaceAppEndColor">#091421</Color>
-    <Color x:Key="AuroraGlowStartColor">#3022D3EE</Color>
-    <Color x:Key="AuroraGlowMiddleColor">#1022D3EE</Color>
-    <Color x:Key="AuroraGlowEndColor">#0022D3EE</Color>
+    <Color x:Key="SurfaceTitleStartColor">#1F4268</Color>
+    <Color x:Key="SurfaceTitleEndColor">#10233B</Color>
     <Color x:Key="AccentCyanColor">#22D3EE</Color>
     <Color x:Key="AccentIndigoColor">#6366F1</Color>
     <Color x:Key="SurfaceSidebarStartColor">#1A243F</Color>
@@ -43,63 +42,54 @@
     <Color x:Key="ScrollThumbHoverColor">#71E1FF</Color>
     <Color x:Key="DangerCloseHoverColor">#C42B4B</Color>
     <Color x:Key="TitleBarDividerColor">#30FFFFFF</Color>
-    <Color x:Key="AnimationAppStartColor">#315C8F</Color>
-    <Color x:Key="AnimationAppEndColor">#0C142B</Color>
-    <Color x:Key="AnimationPanelStartColor">#204A70</Color>
-    <Color x:Key="AnimationPanelEndColor">#122944</Color>
-    <Color x:Key="AnimationInputStartColor">#183153</Color>
-    <Color x:Key="AnimationInputEndColor">#10213B</Color>
-    <Color x:Key="AnimationPopupStartColor">#1A3554</Color>
-    <Color x:Key="AnimationPopupEndColor">#0B1B30</Color>
-
-    <SolidColorBrush x:Key="PrimaryTextBrush" Color="{StaticResource TextPrimaryColor}"/>
-    <SolidColorBrush x:Key="BodyTextBrush" Color="{StaticResource TextBodyColor}"/>
-    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource TextSecondaryColor}"/>
-    <SolidColorBrush x:Key="ListItemTextBrush" Color="{StaticResource TextListColor}"/>
-    <SolidColorBrush x:Key="AccentForegroundBrush" Color="{StaticResource AccentForegroundColor}"/>
-    <SolidColorBrush x:Key="ControlBorderBrush" Color="{StaticResource BorderControlColor}"/>
-    <SolidColorBrush x:Key="FocusBorderBrush" Color="{StaticResource BorderFocusColor}"/>
-    <SolidColorBrush x:Key="DividerBrush" Color="{StaticResource BorderDividerColor}"/>
-    <SolidColorBrush x:Key="PanelOutlineBrush" Color="{StaticResource BorderPanelColor}"/>
-    <SolidColorBrush x:Key="ControlHoverBrush" Color="{StaticResource ControlHoverColor}"/>
-    <SolidColorBrush x:Key="ControlPressedBrush" Color="{StaticResource ControlPressedColor}"/>
-    <SolidColorBrush x:Key="ScrollTrackBrush" Color="{StaticResource ScrollTrackColor}"/>
-    <SolidColorBrush x:Key="ScrollThumbBrush" Color="{StaticResource ScrollThumbColor}"/>
-    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{StaticResource ScrollThumbHoverColor}"/>
-    <SolidColorBrush x:Key="WindowCloseHoverBrush" Color="{StaticResource DangerCloseHoverColor}"/>
-    <SolidColorBrush x:Key="TitleBarDividerBrush" Color="{StaticResource TitleBarDividerColor}"/>
+    <SolidColorBrush x:Key="PrimaryTextBrush" Color="{DynamicResource TextPrimaryColor}"/>
+    <SolidColorBrush x:Key="BodyTextBrush" Color="{DynamicResource TextBodyColor}"/>
+    <SolidColorBrush x:Key="SecondaryTextBrush" Color="{DynamicResource TextSecondaryColor}"/>
+    <SolidColorBrush x:Key="ListItemTextBrush" Color="{DynamicResource TextListColor}"/>
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="{DynamicResource AccentForegroundColor}"/>
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="{DynamicResource BorderControlColor}"/>
+    <SolidColorBrush x:Key="FocusBorderBrush" Color="{DynamicResource BorderFocusColor}"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="{DynamicResource BorderDividerColor}"/>
+    <SolidColorBrush x:Key="PanelOutlineBrush" Color="{DynamicResource BorderPanelColor}"/>
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="{DynamicResource ControlHoverColor}"/>
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="{DynamicResource ControlPressedColor}"/>
+    <SolidColorBrush x:Key="ScrollTrackBrush" Color="{DynamicResource ScrollTrackColor}"/>
+    <SolidColorBrush x:Key="ScrollThumbBrush" Color="{DynamicResource ScrollThumbColor}"/>
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{DynamicResource ScrollThumbHoverColor}"/>
+    <SolidColorBrush x:Key="WindowCloseHoverBrush" Color="{DynamicResource DangerCloseHoverColor}"/>
+    <SolidColorBrush x:Key="TitleBarDividerBrush" Color="{DynamicResource TitleBarDividerColor}"/>
 
     <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-      <GradientStop Color="{StaticResource SurfaceAppStartColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource SurfaceAppEndColor}" Offset="1"/>
+      <GradientStop Color="{DynamicResource SurfaceAppStartColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource SurfaceAppEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="TitleBarSurfaceBrush" StartPoint="0,0" EndPoint="1,0" Opacity="0.88">
-      <GradientStop Color="#1F4268" Offset="0"/>
-      <GradientStop Color="#10233B" Offset="1"/>
+      <GradientStop Color="{DynamicResource SurfaceTitleStartColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource SurfaceTitleEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="AccentGradientBrush" StartPoint="0,0" EndPoint="1,0">
-      <GradientStop Color="{StaticResource AccentCyanColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource AccentIndigoColor}" Offset="1"/>
+      <GradientStop Color="{DynamicResource AccentCyanColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource AccentIndigoColor}" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="SidebarSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.84">
-      <GradientStop Color="{StaticResource SurfaceSidebarStartColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource SurfaceSidebarEndColor}" Offset="1"/>
+      <GradientStop Color="{DynamicResource SurfaceSidebarStartColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource SurfaceSidebarEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="ContentSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.46">
-      <GradientStop Color="{StaticResource SurfaceContentStartColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource SurfaceContentEndColor}" Offset="1"/>
+      <GradientStop Color="{DynamicResource SurfaceContentStartColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource SurfaceContentEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="PanelSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.76">
-      <GradientStop Color="{StaticResource SurfacePanelStartColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource SurfacePanelEndColor}" Offset="1"/>
+      <GradientStop Color="{DynamicResource SurfacePanelStartColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource SurfacePanelEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="InputSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.88">
-      <GradientStop Color="{StaticResource SurfaceInputStartColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource SurfaceInputEndColor}" Offset="1"/>
+      <GradientStop Color="{DynamicResource SurfaceInputStartColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource SurfaceInputEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <LinearGradientBrush x:Key="PopupSurfaceBrush" StartPoint="0,0" EndPoint="1,1" Opacity="0.99">
-      <GradientStop Color="{StaticResource SurfacePopupStartColor}" Offset="0"/>
-      <GradientStop Color="{StaticResource SurfacePopupEndColor}" Offset="1"/>
+      <GradientStop Color="{DynamicResource SurfacePopupStartColor}" Offset="0"/>
+      <GradientStop Color="{DynamicResource SurfacePopupEndColor}" Offset="1"/>
     </LinearGradientBrush>
     <Style x:Key="DarkScrollThumb" TargetType="Thumb">
       <Setter Property="Template">
@@ -363,36 +353,12 @@
       </Setter>
     </Style>
   </Window.Resources>
-  <Grid Background="{StaticResource AppBackgroundBrush}">
+  <Grid Background="{DynamicResource AppBackgroundBrush}">
     <Grid.RowDefinitions>
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
-    <Border x:Name="AuroraGlowLayer" Grid.RowSpan="2" IsHitTestVisible="False">
-      <Border.Background>
-        <RadialGradientBrush Center="0.12,0.08" GradientOrigin="0.12,0.08" RadiusX="0.82" RadiusY="0.74">
-          <GradientStop Color="#8A22D3EE" Offset="0"/>
-          <GradientStop Color="#322C7CFF" Offset="0.42"/>
-          <GradientStop Color="#0022D3EE" Offset="1"/>
-        </RadialGradientBrush>
-      </Border.Background>
-      <Border.Triggers>
-        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-          <BeginStoryboard>
-            <Storyboard>
-              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.Center)"
-                              From="0.12,0.08" To="0.84,0.24"
-                              Duration="0:0:12" AutoReverse="True" RepeatBehavior="Forever" />
-              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.GradientOrigin)"
-                              From="0.12,0.08" To="0.76,0.18"
-                              Duration="0:0:12" AutoReverse="True" RepeatBehavior="Forever" />
-            </Storyboard>
-          </BeginStoryboard>
-        </EventTrigger>
-      </Border.Triggers>
-    </Border>
-
-    <Grid Name="TitleBar" Grid.Row="0" Background="{StaticResource TitleBarSurfaceBrush}">
+    <Grid Name="TitleBar" Grid.Row="0" Background="{DynamicResource TitleBarSurfaceBrush}">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="220"/>
         <ColumnDefinition Width="*"/>
@@ -423,7 +389,7 @@
       </Grid.ColumnDefinitions>
 
     <!-- macOS System Settings-style navigation sidebar -->
-    <Border Name="SidebarPanel" Grid.Column="0" Background="{StaticResource SidebarSurfaceBrush}"
+    <Border Name="SidebarPanel" Grid.Column="0" Background="{DynamicResource SidebarSurfaceBrush}"
             BorderBrush="{DynamicResource DividerBrush}" BorderThickness="0,0,1,0">
       <Grid Margin="14,20,14,16">
         <Grid.RowDefinitions>
@@ -474,7 +440,7 @@
     </Border>
 
     <!-- Detail page -->
-    <Grid Name="ContentPanel" Grid.Column="1" Background="{StaticResource ContentSurfaceBrush}">
+    <Grid Name="ContentPanel" Grid.Column="1" Background="{DynamicResource ContentSurfaceBrush}">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="Auto"/>
@@ -542,51 +508,5 @@
       </Border>
     </Grid>
     </Grid>
-    <Border x:Name="AuroraMistLayer" Grid.RowSpan="2" Panel.ZIndex="9" IsHitTestVisible="False" Opacity="0.64">
-      <Border.Background>
-        <RadialGradientBrush Center="0.22,0.72" GradientOrigin="0.22,0.72" RadiusX="0.58" RadiusY="0.54">
-          <GradientStop Color="#5A31E8C5" Offset="0"/>
-          <GradientStop Color="#1D25BFE5" Offset="0.46"/>
-          <GradientStop Color="#0025BFE5" Offset="1"/>
-        </RadialGradientBrush>
-      </Border.Background>
-      <Border.Triggers>
-        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-          <BeginStoryboard>
-            <Storyboard>
-              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.Center)"
-                              From="0.22,0.72" To="0.80,0.18"
-                              Duration="0:0:16" AutoReverse="True" RepeatBehavior="Forever" />
-              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.GradientOrigin)"
-                              From="0.22,0.72" To="0.72,0.24"
-                              Duration="0:0:16" AutoReverse="True" RepeatBehavior="Forever" />
-            </Storyboard>
-          </BeginStoryboard>
-        </EventTrigger>
-      </Border.Triggers>
-    </Border>
-    <Border x:Name="AuroraOverlayLayer" Grid.RowSpan="2" Panel.ZIndex="10" IsHitTestVisible="False" Opacity="0.78">
-      <Border.Background>
-        <RadialGradientBrush Center="0.78,0.22" GradientOrigin="0.78,0.22" RadiusX="0.62" RadiusY="0.60">
-          <GradientStop Color="#6836E8FF" Offset="0"/>
-          <GradientStop Color="#2422D3EE" Offset="0.44"/>
-          <GradientStop Color="#0036E8FF" Offset="1"/>
-        </RadialGradientBrush>
-      </Border.Background>
-      <Border.Triggers>
-        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-          <BeginStoryboard>
-            <Storyboard>
-              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.Center)"
-                              From="0.78,0.22" To="0.18,0.76"
-                              Duration="0:0:9" AutoReverse="True" RepeatBehavior="Forever" />
-              <PointAnimation Storyboard.TargetProperty="Background.(RadialGradientBrush.GradientOrigin)"
-                              From="0.78,0.22" To="0.24,0.70"
-                              Duration="0:0:9" AutoReverse="True" RepeatBehavior="Forever" />
-            </Storyboard>
-          </BeginStoryboard>
-        </EventTrigger>
-      </Border.Triggers>
-    </Border>
   </Grid>
 </Window>
