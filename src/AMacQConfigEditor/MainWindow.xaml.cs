@@ -7,7 +7,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Media.Effects;
 using System.Windows.Threading;
 using AMacQConfigEditor.Services;
 using AMacQConfigEditor.ViewModels;
@@ -109,21 +108,7 @@ public partial class MainWindow : Window
         var section = new StackPanel { Margin = new Thickness(title == "按键" ? 0 : 8, 0, title == "按键" ? 8 : 0, 0) };
         section.Children.Add(new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8), Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextBrush") });
         var list = new StackPanel();
-        var glassContent = new Grid { ClipToBounds = true };
-        glassContent.Children.Add(new Border
-        {
-            Background = (System.Windows.Media.Brush)FindResource("FrostedBackdropBrush"),
-            Opacity = 0.58,
-            IsHitTestVisible = false,
-            Effect = new BlurEffect { Radius = 12 }
-        });
-        glassContent.Children.Add(new Border
-        {
-            Background = (System.Windows.Media.Brush)FindResource("PanelSurfaceBrush"),
-            IsHitTestVisible = false
-        });
-        glassContent.Children.Add(list);
-        var outer = new Border { BorderBrush = (System.Windows.Media.Brush)FindResource("ControlBorderBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Child = glassContent };
+        var outer = new Border { Background = (System.Windows.Media.Brush)FindResource("PanelSurfaceBrush"), BorderBrush = (System.Windows.Media.Brush)FindResource("ControlBorderBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Child = list };
         section.Children.Add(outer);
         foreach (var field in fields)
         {
