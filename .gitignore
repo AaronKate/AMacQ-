@@ -18,6 +18,7 @@ Desktop.ini
 
 .worktrees/
 dist/
+.superpowers/
 
 # Local-only UI verification project
 tests/

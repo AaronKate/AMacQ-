@@ -423,9 +423,20 @@
                 <TextBlock Name="DeploymentStatusText" Text="资源包可部署" FontSize="11" FontWeight="SemiBold"
                            Foreground="{DynamicResource PrimaryTextBrush}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
               </StackPanel>
-              <Button Name="DecompressBtn" Grid.Column="1" Content="↓" ToolTip="一键部署" Style="{StaticResource PrimaryButton}"
+              <Button Name="DecompressBtn" Grid.Column="1" ToolTip="一键部署" Style="{StaticResource PrimaryButton}"
                       Background="{StaticResource AccentGradientBrush}" Foreground="{DynamicResource AccentForegroundBrush}"
-                      FontSize="18" FontWeight="SemiBold" Width="32" Height="30" Padding="0" VerticalAlignment="Center"/>
+                      Width="32" Height="30" Padding="0" VerticalAlignment="Center">
+                <Viewbox Width="19" Height="19" Stretch="Uniform">
+                  <Canvas Width="24" Height="24">
+                    <Path Data="M12,2.5 L19,6.3 L12,10.1 L5,6.3 Z M5,6.3 L5,14.3 L12,18.1 L19,14.3 L19,6.3 M12,10.1 L12,18.1"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                          StrokeThickness="1.55" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                    <Path Data="M12,11 L12,20.5 M8.8,17.3 L12,20.5 L15.2,17.3"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                          StrokeThickness="1.8" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+                  </Canvas>
+                </Viewbox>
+              </Button>
             </Grid>
           </Border>
         </Grid>
