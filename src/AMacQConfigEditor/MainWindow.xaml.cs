@@ -32,6 +32,7 @@ public partial class MainWindow : Window
         SetWindowIcon();
 
         DecompressBtn.Click += (_, _) => DeployEmbeddedPackage();
+        DeploymentDialogCloseButton.Click += (_, _) => CloseDeploymentDialog();
         SaveBtn.Click += (_, _) => SaveChanges();
         MinimizeBtn.Click += (_, _) => WindowState = WindowState.Minimized;
         CloseBtn.Click += (_, _) => Close();
@@ -51,23 +52,61 @@ public partial class MainWindow : Window
         try
         {
             DecompressBtn.IsEnabled = false;
+            ShowDeploymentProgress();
             DeploymentStatusText.Text = "正在解压资源包…";
-            var result = await Task.Run(() => EmbeddedPackageDeploymentService.Deploy(@"C:\"));
+            IProgress<PackageDeploymentProgress> progress = new Progress<PackageDeploymentProgress>(UpdateDeploymentProgress);
+            var result = await Task.Run(() => EmbeddedPackageDeploymentService.Deploy(@"C:\", progress.Report));
             LoadDefaultFilesIfAvailable();
             DeploymentStatusText.Text = result.ExtractedTargets.Count > 0
                 ? "部署完成，已就绪"
                 : "已检查，资源已存在";
-            MessageBox.Show(result.ToDisplayMessage(), "部署完成", MessageBoxButton.OK, MessageBoxImage.Information);
+            ShowDeploymentResult("部署完成", result.ToDisplayMessage());
         }
         catch (Exception exception)
         {
             DeploymentStatusText.Text = "部署失败，请检查权限";
-            MessageBox.Show(exception.Message, "解压失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShowDeploymentResult("部署失败", exception.Message);
         }
         finally
         {
             DecompressBtn.IsEnabled = true;
         }
+    }
+
+    private void ShowDeploymentProgress()
+    {
+        DeploymentDialogOverlay.Visibility = Visibility.Visible;
+        DeploymentDialogTitle.Text = "正在部署资源包";
+        DeploymentDialogMessage.Text = "正在准备部署…";
+        DeploymentProgressBar.Visibility = Visibility.Visible;
+        DeploymentProgressBar.Value = 0;
+        DeploymentProgressText.Visibility = Visibility.Visible;
+        DeploymentProgressText.Text = "0 / 0 · 0%";
+        DeploymentDialogCloseButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void UpdateDeploymentProgress(PackageDeploymentProgress progress)
+    {
+        DeploymentProgressBar.Value = progress.Percentage;
+        DeploymentProgressText.Text = $"{progress.CompletedFiles} / {progress.TotalFiles} · {progress.Percentage:0}%";
+        DeploymentDialogMessage.Text = string.IsNullOrEmpty(progress.CurrentTarget)
+            ? "正在准备部署…"
+            : $"正在处理：{progress.CurrentTarget}";
+    }
+
+    private void ShowDeploymentResult(string title, string message)
+    {
+        DeploymentDialogOverlay.Visibility = Visibility.Visible;
+        DeploymentDialogTitle.Text = title;
+        DeploymentDialogMessage.Text = message;
+        DeploymentProgressBar.Visibility = Visibility.Collapsed;
+        DeploymentProgressText.Visibility = Visibility.Collapsed;
+        DeploymentDialogCloseButton.Visibility = Visibility.Visible;
+    }
+
+    private void CloseDeploymentDialog()
+    {
+        DeploymentDialogOverlay.Visibility = Visibility.Collapsed;
     }
 
     private void LoadDefaultFilesIfAvailable()

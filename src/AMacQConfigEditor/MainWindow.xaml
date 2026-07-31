@@ -6,7 +6,7 @@
         WindowStyle="None" ResizeMode="CanResize"
         Background="{DynamicResource AppBackgroundBrush}" Foreground="{DynamicResource PrimaryTextBrush}" FontFamily="Segoe UI">
   <shell:WindowChrome.WindowChrome>
-    <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+    <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="12" UseAeroCaptionButtons="False"/>
   </shell:WindowChrome.WindowChrome>
   <Window.Resources>
     <!-- Theme palette: change only these Color resources to retheme the application. -->
@@ -352,8 +352,26 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <Style x:Key="DeploymentProgressBar" TargetType="ProgressBar">
+      <Setter Property="Height" Value="9"/>
+      <Setter Property="Background" Value="{DynamicResource InputSurfaceBrush}"/>
+      <Setter Property="Foreground" Value="{StaticResource AccentGradientBrush}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ProgressBar">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{DynamicResource ControlBorderBrush}"
+                    BorderThickness="1" CornerRadius="5" SnapsToDevicePixels="True">
+              <Grid x:Name="PART_Track" ClipToBounds="True">
+                <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="4"/>
+              </Grid>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
   </Window.Resources>
-  <Grid Background="{DynamicResource AppBackgroundBrush}">
+  <Border Background="{DynamicResource AppBackgroundBrush}" CornerRadius="12" ClipToBounds="True">
+    <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
@@ -536,5 +554,24 @@
       </Border>
     </Grid>
     </Grid>
-  </Grid>
+      <Grid Name="DeploymentDialogOverlay" Grid.RowSpan="2" Background="#9A06101D" Visibility="Collapsed" Panel.ZIndex="10">
+        <Border Width="390" Padding="24" Background="{DynamicResource PopupSurfaceBrush}"
+                BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+          <StackPanel>
+            <TextBlock Name="DeploymentDialogTitle" Text="资源部署" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}"/>
+            <TextBlock Name="DeploymentDialogMessage" Text="正在准备部署…" TextWrapping="Wrap"
+                       FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,16"/>
+            <ProgressBar Name="DeploymentProgressBar" Minimum="0" Maximum="100" Value="0" Style="{StaticResource DeploymentProgressBar}"/>
+            <TextBlock Name="DeploymentProgressText" Text="0 / 0 · 0%" HorizontalAlignment="Right"
+                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,7,0,0"/>
+            <Button Name="DeploymentDialogCloseButton" Content="确定" Style="{StaticResource PrimaryButton}"
+                    Background="{StaticResource AccentGradientBrush}" Foreground="{DynamicResource AccentForegroundBrush}"
+                    Padding="24,8" Margin="0,20,0,0" HorizontalAlignment="Right" Visibility="Collapsed"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </Border>
 </Window>

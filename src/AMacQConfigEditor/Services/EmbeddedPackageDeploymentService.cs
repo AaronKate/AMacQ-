@@ -11,7 +11,7 @@ internal static class EmbeddedPackageDeploymentService
 {
     private const string ResourceName = "AMacQConfigEditor.Resources.SorinPackage.zip";
 
-    public static PackageDeploymentResult Deploy(string targetRoot)
+    public static PackageDeploymentResult Deploy(string targetRoot, Action<PackageDeploymentProgress>? progress = null)
     {
         var root = Path.GetFullPath(targetRoot);
         var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
@@ -30,14 +30,24 @@ internal static class EmbeddedPackageDeploymentService
         var targets = packageEntries
             .GroupBy(item => item.RelativePath[0], StringComparer.OrdinalIgnoreCase)
             .ToArray();
+        var totalFiles = packageEntries.Count(item => item.Entry.Name.Length > 0);
+        var completedFiles = 0;
+        progress?.Invoke(new PackageDeploymentProgress(completedFiles, totalFiles, string.Empty));
         var extracted = new List<string>();
         var skipped = new List<string>();
 
         foreach (var target in targets)
         {
+            var targetFiles = target.Where(item => item.Entry.Name.Length > 0).ToArray();
             var targetPath = GetSafePath(rootWithSeparator, [target.Key]);
             if (File.Exists(targetPath) || Directory.Exists(targetPath))
             {
+                foreach (var _ in targetFiles)
+                {
+                    completedFiles++;
+                    progress?.Invoke(new PackageDeploymentProgress(completedFiles, totalFiles, target.Key));
+                }
+
                 skipped.Add(target.Key);
                 continue;
             }
@@ -48,6 +58,8 @@ internal static class EmbeddedPackageDeploymentService
                 var destination = GetSafePath(rootWithSeparator, item.RelativePath);
                 Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                 item.Entry.ExtractToFile(destination);
+                completedFiles++;
+                progress?.Invoke(new PackageDeploymentProgress(completedFiles, totalFiles, target.Key));
             }
 
             extracted.Add(target.Key);
@@ -83,6 +95,11 @@ internal static class EmbeddedPackageDeploymentService
 
     private sealed record PackageEntry(ZipArchiveEntry Entry, string[] RelativePath);
     private sealed record ArchiveEntryPath(ZipArchiveEntry Entry, string[] PathParts);
+}
+
+internal sealed record PackageDeploymentProgress(int CompletedFiles, int TotalFiles, string CurrentTarget)
+{
+    public double Percentage => TotalFiles == 0 ? 100 : (double)CompletedFiles / TotalFiles * 100;
 }
 
 internal sealed record PackageDeploymentResult(IReadOnlyList<string> ExtractedTargets, IReadOnlyList<string> SkippedTargets)
