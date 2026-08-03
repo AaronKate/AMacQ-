@@ -1,15 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net48</TargetFramework>
     <UseWPF>true</UseWPF>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>..\..\assets\AMacQ.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="..\..\assets\AMacQ.ico" Link="AMacQ.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Reference Include="System.IO.Compression" />
+    <EmbeddedResource Include="..\..\assets\AMacQ.ico" LogicalName="AMacQConfigEditor.Resources.AMacQ.ico" />
     <EmbeddedResource Include="Resources\Sorin 24.1 S10.zip" LogicalName="AMacQConfigEditor.Resources.SorinPackage.zip" />
   </ItemGroup>
 </Project>

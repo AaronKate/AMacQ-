@@ -7,6 +7,8 @@ namespace AMacQConfigEditor.Services;
 
 internal static class TechnologyThemeService
 {
+    private static readonly Random ThemeRandom = new Random();
+
     private static readonly TechnologyTheme[] Themes =
     [
         Create("Deep Ocean", "#142C48", "#081522", "#1C4268", "#10263D", "#3ED8FF", "#7687FF", "#1A3654", "#101C30", "#193653", "#0B1728", "#1A3857", "#0D2037", "#142A49", "#0B1B32", "#132A48", "#081728", "#4D91B3", "#6CE1FF", "#304E6F", "#6B9CCE", "#245575", "#183D5A"),
@@ -29,10 +31,10 @@ internal static class TechnologyThemeService
 
     public static string ApplyRandomTheme(Window window)
     {
-        var theme = Themes[Random.Shared.Next(Themes.Length)];
-        foreach (var (key, value) in theme.Colors)
+        var theme = Themes[ThemeRandom.Next(Themes.Length)];
+        foreach (var color in theme.Colors)
         {
-            window.Resources[key] = (Color)ColorConverter.ConvertFromString(value)!;
+            window.Resources[color.Key] = (Color)ColorConverter.ConvertFromString(color.Value)!;
         }
 
         return theme.Name;

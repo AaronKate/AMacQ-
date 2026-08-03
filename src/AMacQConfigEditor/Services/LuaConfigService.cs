@@ -27,8 +27,8 @@ public static class LuaConfigService
                 continue;
             }
 
-            var weapon = assignment.Name[..separator];
-            var suffix = assignment.Name[(separator + 1)..];
+            var weapon = assignment.Name.Substring(0, separator);
+            var suffix = assignment.Name.Substring(separator + 1);
             if (!string.Equals(weapon, selectedWeapon, StringComparison.Ordinal) &&
                 suffixValues.TryGetValue(suffix, out var selectedValue) &&
                 selectedValue != "0" &&
@@ -43,6 +43,7 @@ public static class LuaConfigService
 
     public static IReadOnlyList<LuaAssignment> GetAssignments(string content) =>
         AssignmentPattern.Matches(content)
+            .Cast<Match>()
             .Select(match => new LuaAssignment(match.Groups["name"].Value, match.Groups["value"].Value.Trim()))
             .ToArray();
 
@@ -77,16 +78,16 @@ public static class LuaConfigService
             (Suffix: "Third", Prefix: "Ctrl+")
         };
         return string.Join(" · ", bindings
-            .Select(binding => (binding.Prefix, Value: GetNumber(content, $"{weapon}_{binding.Suffix}")))
+            .Select(binding => new { binding.Prefix, Value = GetNumber(content, $"{weapon}_{binding.Suffix}") })
             .Where(binding => binding.Value is not null && binding.Value is not "0")
             .Select(binding => $"{binding.Prefix}{binding.Value}"));
     }
 
     private static string SetValue(string content, string variableName, string value, bool quoted)
     {
-        ArgumentNullException.ThrowIfNull(content);
-        ArgumentException.ThrowIfNullOrWhiteSpace(variableName);
-        ArgumentNullException.ThrowIfNull(value);
+        if (content is null) throw new ArgumentNullException(nameof(content));
+        if (string.IsNullOrWhiteSpace(variableName)) throw new ArgumentException("Variable name cannot be null or whitespace.", nameof(variableName));
+        if (value is null) throw new ArgumentNullException(nameof(value));
 
         var valuePattern = quoted
             ? "(?<quote>[\"'])(?<value>[^\"\\r\\n]*?)\\k<quote>"

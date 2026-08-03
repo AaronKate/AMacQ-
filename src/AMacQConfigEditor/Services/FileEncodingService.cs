@@ -7,27 +7,27 @@ public static class FileEncodingService
 {
     public static Encoding Detect(Stream stream)
     {
-        ArgumentNullException.ThrowIfNull(stream);
+        if (stream is null) throw new ArgumentNullException(nameof(stream));
 
-        Span<byte> prefix = stackalloc byte[3];
+        var prefix = new byte[3];
         var originalPosition = stream.CanSeek ? stream.Position : 0;
-        var count = stream.Read(prefix);
+        var count = stream.Read(prefix, 0, prefix.Length);
         if (stream.CanSeek)
         {
             stream.Position = originalPosition;
         }
 
-        if (count >= 3 && prefix[..3].SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }))
+        if (count >= 3 && prefix[0] == 0xEF && prefix[1] == 0xBB && prefix[2] == 0xBF)
         {
             return new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
         }
 
-        if (count >= 2 && prefix[..2].SequenceEqual(new byte[] { 0xFF, 0xFE }))
+        if (count >= 2 && prefix[0] == 0xFF && prefix[1] == 0xFE)
         {
             return Encoding.Unicode;
         }
 
-        if (count >= 2 && prefix[..2].SequenceEqual(new byte[] { 0xFE, 0xFF }))
+        if (count >= 2 && prefix[0] == 0xFE && prefix[1] == 0xFF)
         {
             return Encoding.BigEndianUnicode;
         }
@@ -39,7 +39,7 @@ public static class FileEncodingService
     {
         using var stream = File.OpenRead(path);
         var encoding = Detect(stream);
-        using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: false, leaveOpen: false);
+        using var reader = new StreamReader(stream, encoding, detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: false);
         return (reader.ReadToEnd(), encoding);
     }
 }

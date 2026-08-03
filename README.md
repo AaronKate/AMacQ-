@@ -1,23 +1,45 @@
 # AMacQ 配置编辑器
 
-用于编辑 AMacQ Lua 配置文件的 Windows 桌面项目。当前主程序为 .NET 10 WPF 应用，项目仅读取和修改用户在界面中主动选择的本地配置文件；不会上传文件，也不会与游戏进程交互。
+用于编辑 AMacQ Lua 配置文件的 Windows WPF 桌面应用。程序仅读取和修改用户在界面中主动选择的本地配置文件，不会上传文件，也不会与游戏进程交互。
+
+## 运行环境
+
+- Windows 10 x64（建议已完成常规系统更新）
+- .NET Framework 4.8 或更高版本的 .NET Framework 4.x
+
+发布版不依赖 .NET 10 Desktop Runtime，也不需要附带 DLL、ICO 或 ZIP 文件。目标电脑仍可能因网吧安全软件或系统策略阻止未知 EXE；此类限制需要由电脑管理方处理。
 
 ## 技术栈
 
-- .NET 10
+- .NET Framework 4.8
 - WPF
-- C#（启用可空引用类型与隐式全局 using）
-- Windows x64 自包含单文件发布
+- C#
+- `System.IO.Compression.ZipArchive`（读取并解压内嵌 ZIP 资源）
 
 ## 开发环境
 
 - Windows 10 或更高版本
-- .NET 10 SDK
-- Visual Studio：安装“使用 .NET 的桌面开发”工作负载，并确保已安装 .NET 10 SDK
-
-发布给其他电脑运行时，目标电脑还需要安装 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)（Windows x64）。
+- .NET 10 SDK（用于 SDK 风格项目的构建）
+- .NET Framework 4.8 Developer Pack / Reference Assemblies
+- Visual Studio：安装“使用 .NET 的桌面开发”工作负载
 
 双击根目录的 `AMacQ配置编辑器.sln`，即可在 Visual Studio 中打开解决方案。
+
+## 单 EXE 发布
+
+在项目根目录运行：
+
+```powershell
+.\Build-WpfRelease.ps1
+```
+
+脚本以 Release 配置构建，并校验发布目录中只保留一个 EXE：
+
+```text
+dist\net48\AMacQConfigEditor.exe
+```
+
+请复制该 EXE 到目标电脑运行。不要使用 Visual Studio 的“发布”页替代此脚本；脚本会移除 .NET Framework 自动生成的 `.exe.config`，以保证单文件分发。
 
 ## 项目结构
 
@@ -25,36 +47,18 @@
 | --- | --- |
 | `AMacQ配置编辑器.sln` | Visual Studio 解决方案 |
 | `src/AMacQConfigEditor` | WPF 主项目 |
-| `src/AMacQConfigEditor/MainWindow.xaml` | 窗口布局、磨砂主题资源与控件样式 |
-| `src/AMacQConfigEditor/Services` | Lua 读取、文件编码与原子写入服务 |
+| `src/AMacQConfigEditor/MainWindow.xaml` | 窗口布局、主题资源与控件样式 |
+| `src/AMacQConfigEditor/Services` | Lua 读取、文件编码、原子写入与资源部署服务 |
 | `src/AMacQConfigEditor/ViewModels` | 配置编辑状态与界面数据绑定 |
-| `assets/AMacQ.ico` | 应用、任务栏和窗口图标 |
-| `Build-WpfRelease.ps1` | Windows x64 自包含单文件发布脚本 |
+| `assets/AMacQ.ico` | EXE 与自绘标题栏使用的内嵌图标 |
+| `Build-WpfRelease.ps1` | 单 EXE 发布脚本 |
 
 ## 本地构建
-
-在项目根目录执行：
 
 ```powershell
 dotnet restore .\AMacQ配置编辑器.sln
 dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 ```
-
-## 发布单文件 EXE
-
-在项目根目录执行：
-
-```powershell
-.\Build-WpfRelease.ps1
-```
-
-脚本会发布 Windows x64 的框架依赖单文件程序，输出到：
-
-```text
-dist\wpf\AMacQConfigEditor.exe
-```
-
-也可以在 Visual Studio 中右键 WPF 项目，选择“发布”，再使用 `FolderProfile` 配置。该配置已启用框架依赖和单文件选项。
 
 ## 主要功能
 
@@ -65,8 +69,8 @@ dist\wpf\AMacQConfigEditor.exe
 - 设置触发方式与灵敏度增幅激活键
 - 保存时保留原文件编码、尽量保留 Lua 内容格式，并通过临时文件原子替换写入
 - 敏感度输入仅允许非负整数或最多两位小数，支持方向键以 `0.01` 调整
-- 每次启动时随机选择一套固定科技主题：深海青蓝、量子紫电、碳纤琥珀或矩阵翡翠
-- 各主题均使用分层半透明渐变、柔和高光边框与静态玻璃卡片层次；不依赖桌面透明或系统材质支持，也不包含流光动画
+- 启动时随机选择固定科技主题
+- 将内嵌 ZIP 资源解压到 `C:\`；若目标一级目录已存在则跳过，不覆盖已有内容
 
 ## 配置文件使用
 

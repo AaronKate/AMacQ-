@@ -283,11 +283,16 @@ public partial class MainWindow : Window
 
     private void SetWindowIcon()
     {
-        var iconPath = Path.Combine(AppContext.BaseDirectory, "AMacQ.ico");
-        if (!File.Exists(iconPath)) return;
+        using var iconStream = typeof(MainWindow).Assembly.GetManifestResourceStream("AMacQConfigEditor.Resources.AMacQ.ico");
+        if (iconStream is null) return;
 
-        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri(iconPath));
-        TitleBarIcon.Source = Icon;
+        var icon = System.Windows.Media.Imaging.BitmapFrame.Create(
+            iconStream,
+            System.Windows.Media.Imaging.BitmapCreateOptions.PreservePixelFormat,
+            System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+        icon.Freeze();
+        Icon = icon;
+        TitleBarIcon.Source = icon;
     }
 
     private sealed record WeaponListItem(string Name, string BindingSummary)
@@ -321,6 +326,6 @@ public partial class MainWindow : Window
     }
 
     private static IReadOnlyList<KeyOption> KeyOptions { get; } = KeyOptionsFor("generic", null);
-    private sealed record KeyOption(string Text, string Value);
+    private sealed record KeyOption(string Text, string? Value);
     private sealed record SelectionOption(string Text, string Value);
 }

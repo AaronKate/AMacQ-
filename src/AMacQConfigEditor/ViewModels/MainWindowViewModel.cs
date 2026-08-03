@@ -86,7 +86,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _session.KeyBindings.Content = LuaConfigService.SetString(_session.KeyBindings.Content, "modeswitch", ModeSwitch);
         _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_qq1156777787_second", AltKey);
         _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_Third", CtrlKey);
-        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBindings(_session.KeyBindings.Content, SelectedWeapon, new Dictionary<string, string> { ["qq1156777787"] = PrimaryKey, ["qq1156777787_second"] = AltKey, ["Third"] = CtrlKey });
+        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBindings(_session.KeyBindings.Content, SelectedWeapon!, new Dictionary<string, string> { ["qq1156777787"] = PrimaryKey, ["qq1156777787_second"] = AltKey, ["Third"] = CtrlKey });
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_X", SensitivityX);
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_Y", SensitivityY);
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_add_X", SensitivityAddX);

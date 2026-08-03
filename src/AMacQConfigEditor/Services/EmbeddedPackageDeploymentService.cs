@@ -14,7 +14,7 @@ internal static class EmbeddedPackageDeploymentService
     public static PackageDeploymentResult Deploy(string targetRoot, Action<PackageDeploymentProgress>? progress = null)
     {
         var root = Path.GetFullPath(targetRoot);
-        var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
+        var rootWithSeparator = root.EndsWith(Path.DirectorySeparatorChar.ToString()) ? root : root + Path.DirectorySeparatorChar;
         using var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourceName)
             ?? throw new InvalidOperationException("未找到内置压缩包资源。");
         using var archive = new ZipArchive(resource, ZipArchiveMode.Read);
@@ -39,7 +39,7 @@ internal static class EmbeddedPackageDeploymentService
         foreach (var target in targets)
         {
             var targetFiles = target.Where(item => item.Entry.Name.Length > 0).ToArray();
-            var targetPath = GetSafePath(rootWithSeparator, [target.Key]);
+            var targetPath = GetSafePath(rootWithSeparator, new[] { target.Key });
             if (File.Exists(targetPath) || Directory.Exists(targetPath))
             {
                 foreach (var _ in targetFiles)
@@ -77,14 +77,15 @@ internal static class EmbeddedPackageDeploymentService
     }
 
     private static string[] GetRelativePath(string[] pathParts, bool removeWrapperFolder) =>
-        removeWrapperFolder && pathParts.Length > 1 ? pathParts[1..] : pathParts;
+        removeWrapperFolder && pathParts.Length > 1 ? pathParts.Skip(1).ToArray() : pathParts;
 
     private static string[] SplitPath(string entryPath) =>
-        entryPath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        entryPath.Replace('\\', '/').Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
 
     private static string GetSafePath(string rootWithSeparator, IReadOnlyList<string> pathParts)
     {
-        var destination = Path.GetFullPath(Path.Combine([rootWithSeparator, .. pathParts]));
+        var pathSegments = new[] { rootWithSeparator }.Concat(pathParts).ToArray();
+        var destination = Path.GetFullPath(Path.Combine(pathSegments));
         if (!destination.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("压缩包中包含无效路径，已阻止解压。");
