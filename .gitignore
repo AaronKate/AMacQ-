@@ -22,3 +22,8 @@ dist/
 
 # Local-only UI verification project
 tests/
+
+# Author-only offline license signing key. Never commit or distribute this file.
+author-tools/AMacQLicense.private.xml
+author-tools/AMacQLicenseGenerator.exe
+license.json

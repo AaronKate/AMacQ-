@@ -30,7 +30,7 @@
 在项目根目录运行：
 
 ```powershell
-.\Build-WpfRelease.ps1
+.\Build-WpfRelease.cmd
 ```
 
 脚本以 Release 配置构建，并校验发布目录中只保留一个 EXE：
@@ -51,7 +51,8 @@ dist\net48\AMacQConfigEditor.exe
 | `src/AMacQConfigEditor/Services` | Lua 读取、文件编码、原子写入与资源部署服务 |
 | `src/AMacQConfigEditor/ViewModels` | 配置编辑状态与界面数据绑定 |
 | `assets/AMacQ.ico` | EXE 与自绘标题栏使用的内嵌图标 |
-| `Build-WpfRelease.ps1` | 单 EXE 发布脚本 |
+| `Build-WpfRelease.cmd` | 双击构建入口 |
+| `author-tools` | 作者私钥与授权签发工具（不对外分发） |
 
 ## 本地构建
 
@@ -59,6 +60,24 @@ dist\net48\AMacQConfigEditor.exe
 dotnet restore .\AMacQ配置编辑器.sln
 dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 ```
+
+## 离线授权
+
+首次运行时，程序会显示机器码。将该机器码发送给授权方，由授权方生成许可证 JSON 文件；在授权窗口中导入该文件后才能进入主界面。
+
+作者在本机保存 `author-tools\AMacQLicense.private.xml` 私钥文件，绝不能提交、发送或打包此文件。双击根目录的 `启动授权签发工具.cmd` 可打开签发界面。
+
+```powershell
+tools\AMacQLicenseGenerator\bin\Release\net48\AMacQLicenseGenerator.exe .\AMacQLicense.private.xml D:\licenses\user-license.json <机器码> perpetual
+```
+
+签发到期许可证（示例到期日为 2027-08-12）：
+
+```powershell
+tools\AMacQLicenseGenerator\bin\Release\net48\AMacQLicenseGenerator.exe .\AMacQLicense.private.xml D:\licenses\user-license.json <机器码> expires 2027-08-12
+```
+
+工具会生成你指定路径的许可证 JSON 文件。将该文件发送给对应机器的用户；用户换机或重装系统后，收集新的机器码并重新签发。纯离线许可证无法远程撤销已发出的许可证文件。
 
 ## 主要功能
 

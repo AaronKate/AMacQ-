@@ -9,6 +9,9 @@
     <ApplicationIcon>..\..\assets\AMacQ.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(AuthorEdition)' == 'true'">
+    <DefineConstants>$(DefineConstants);AUTHOR_EDITION</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.IO.Compression" />
     <EmbeddedResource Include="..\..\assets\AMacQ.ico" LogicalName="AMacQConfigEditor.Resources.AMacQ.ico" />

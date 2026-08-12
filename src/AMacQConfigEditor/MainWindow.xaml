@@ -143,6 +143,7 @@
     <Style TargetType="TextBox">
       <Setter Property="Background" Value="{DynamicResource InputSurfaceBrush}"/>
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource FocusBorderBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
     </Style>
     <Style TargetType="ComboBox">
@@ -153,6 +154,7 @@
     <Style x:Key="DarkTextBox" TargetType="TextBox">
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
       <Setter Property="Background" Value="{DynamicResource InputSurfaceBrush}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource FocusBorderBrush}"/>
       <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
       <Setter Property="Template">
         <Setter.Value>
@@ -458,11 +460,14 @@
       </Border>
 
       <Border Grid.Column="1" Background="Transparent">
-        <StackPanel HorizontalAlignment="Right" Orientation="Horizontal"
-                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
-          <Button Name="MinimizeBtn" Content="&#xE921;" Style="{StaticResource TitleBarButton}"/>
-          <Button Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource CloseTitleBarButton}"/>
-        </StackPanel>
+        <Grid shell:WindowChrome.IsHitTestVisibleInChrome="True">
+          <TextBlock Name="LicenseStatusText" HorizontalAlignment="Right" VerticalAlignment="Center"
+                     Margin="0,0,104,0" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"/>
+          <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button Name="MinimizeBtn" Content="&#xE921;" Style="{StaticResource TitleBarButton}"/>
+            <Button Name="CloseBtn" Content="&#xE8BB;" Style="{StaticResource CloseTitleBarButton}"/>
+          </StackPanel>
+        </Grid>
       </Border>
       <Border Grid.ColumnSpan="2" BorderBrush="{DynamicResource TitleBarDividerBrush}" BorderThickness="0,0,0,1" IsHitTestVisible="False"/>
     </Grid>

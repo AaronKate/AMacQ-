@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
+using AMacQConfigEditor.Licensing;
 using AMacQConfigEditor.Services;
 using AMacQConfigEditor.ViewModels;
 
@@ -30,6 +31,7 @@ public partial class MainWindow : Window
         TechnologyThemeService.ApplyRandomTheme(this);
         DataContext = _viewModel;
         SetWindowIcon();
+        UpdateLicenseStatus();
 
         DecompressBtn.Click += (_, _) => DeployEmbeddedPackage();
         DeploymentDialogCloseButton.Click += (_, _) => CloseDeploymentDialog();
@@ -45,6 +47,15 @@ public partial class MainWindow : Window
         LoadDefaultFilesIfAvailable();
         _saveResetTimer.Tick += (_, _) => { SaveBtn.Content = "应用"; _saveResetTimer.Stop(); };
         _weaponSearchTimer.Tick += (_, _) => { _weaponSearchPrefix = string.Empty; _weaponSearchTimer.Stop(); };
+    }
+
+    private void UpdateLicenseStatus()
+    {
+        var licenseJson = LicenseStore.Load();
+        var license = string.IsNullOrWhiteSpace(licenseJson) ? null : LicenseDocument.FromJson(licenseJson!);
+        LicenseStatusText.Text = license?.Mode == "expires" && license.ExpiresUtc is { } expiresUtc
+            ? $"授权至 {expiresUtc.ToLocalTime():yyyy-MM-dd}"
+            : "永久授权";
     }
 
     private async void DeployEmbeddedPackage()
