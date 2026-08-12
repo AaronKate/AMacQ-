@@ -57,10 +57,11 @@ public partial class MainWindow : Window
             IProgress<PackageDeploymentProgress> progress = new Progress<PackageDeploymentProgress>(UpdateDeploymentProgress);
             var result = await Task.Run(() => EmbeddedPackageDeploymentService.Deploy(@"C:\", progress.Report));
             LoadDefaultFilesIfAvailable();
+            var ghubLaunchResult = LogitechGHubLauncher.TryLaunchInstalledGHub();
             DeploymentStatusText.Text = result.ExtractedTargets.Count > 0
                 ? "部署完成，已就绪"
                 : "已检查，资源已存在";
-            ShowDeploymentResult("部署完成", result.ToDisplayMessage());
+            ShowDeploymentResult("部署完成", LogitechGHubLauncher.AppendFailureMessage(result.ToDisplayMessage(), ghubLaunchResult));
         }
         catch (Exception exception)
         {
