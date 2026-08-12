@@ -62,6 +62,7 @@ public partial class MainWindow : Window
                 ? "部署完成，已就绪"
                 : "已检查，资源已存在";
             ShowDeploymentResult("部署完成", LogitechGHubLauncher.AppendFailureMessage(result.ToDisplayMessage(), ghubLaunchResult));
+            BeginStoryboard((System.Windows.Media.Animation.Storyboard)FindResource("DeploymentSuccessPulse"));
         }
         catch (Exception exception)
         {

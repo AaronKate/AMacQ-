@@ -343,6 +343,20 @@
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
                 <Setter TargetName="bd" Property="Opacity" Value="0.88"/>
+                <Trigger.EnterActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="Opacity" To="0.88" Duration="0:0:0.14"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.EnterActions>
+                <Trigger.ExitActions>
+                  <BeginStoryboard>
+                    <Storyboard>
+                      <DoubleAnimation Storyboard.TargetName="bd" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.16"/>
+                    </Storyboard>
+                  </BeginStoryboard>
+                </Trigger.ExitActions>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
                 <Setter TargetName="bd" Property="Opacity" Value="0.72"/>
@@ -369,13 +383,66 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <Storyboard x:Key="BackgroundGlowAnimation" RepeatBehavior="Forever" AutoReverse="True">
+      <DoubleAnimation Storyboard.TargetName="GlowCyanTransform" Storyboard.TargetProperty="X" From="-100" To="100" Duration="0:0:9"/>
+      <DoubleAnimation Storyboard.TargetName="GlowCyanTransform" Storyboard.TargetProperty="Y" From="70" To="-80" Duration="0:0:9"/>
+      <DoubleAnimation Storyboard.TargetName="GlowCyan" Storyboard.TargetProperty="Opacity" From="0.20" To="0.32" Duration="0:0:9"/>
+      <DoubleAnimation Storyboard.TargetName="GlowVioletTransform" Storyboard.TargetProperty="X" From="100" To="-100" Duration="0:0:12"/>
+      <DoubleAnimation Storyboard.TargetName="GlowVioletTransform" Storyboard.TargetProperty="Y" From="-70" To="85" Duration="0:0:12"/>
+      <DoubleAnimation Storyboard.TargetName="GlowViolet" Storyboard.TargetProperty="Opacity" From="0.20" To="0.28" Duration="0:0:12"/>
+    </Storyboard>
+    <Storyboard x:Key="DeploymentSuccessPulse">
+      <DoubleAnimation Storyboard.TargetName="DeploymentPulseBorder" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
+      <DoubleAnimation Storyboard.TargetName="DeploymentPulseBorder" Storyboard.TargetProperty="Opacity" From="1" To="0" BeginTime="0:0:0.18" Duration="0:0:0.47"/>
+      <DoubleAnimation Storyboard.TargetName="DeploymentScanTransform" Storyboard.TargetProperty="X" From="-140" To="420" Duration="0:0:0.65"/>
+      <DoubleAnimation Storyboard.TargetName="DeploymentScanBand" Storyboard.TargetProperty="Opacity" From="0" To="0.85" Duration="0:0:0.10"/>
+      <DoubleAnimation Storyboard.TargetName="DeploymentScanBand" Storyboard.TargetProperty="Opacity" From="0.85" To="0" BeginTime="0:0:0.48" Duration="0:0:0.17"/>
+    </Storyboard>
   </Window.Resources>
+  <Window.Triggers>
+    <EventTrigger RoutedEvent="Window.Loaded">
+      <BeginStoryboard Storyboard="{StaticResource BackgroundGlowAnimation}"/>
+    </EventTrigger>
+  </Window.Triggers>
   <Border Background="{DynamicResource AppBackgroundBrush}" CornerRadius="12" ClipToBounds="True">
     <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="38"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
+    <Grid Name="BackgroundGlowLayer" Grid.RowSpan="2" IsHitTestVisible="False" ClipToBounds="True">
+      <Ellipse Name="GlowCyan" Width="620" Height="480" HorizontalAlignment="Left" VerticalAlignment="Top" Opacity="0.20">
+        <Ellipse.Fill>
+          <RadialGradientBrush>
+            <GradientStop Color="{DynamicResource AccentCyanColor}" Offset="0"/>
+            <GradientStop Color="#00000000" Offset="1"/>
+          </RadialGradientBrush>
+        </Ellipse.Fill>
+        <Ellipse.RenderTransform><TranslateTransform x:Name="GlowCyanTransform"/></Ellipse.RenderTransform>
+      </Ellipse>
+      <Ellipse Name="GlowViolet" Width="680" Height="520" HorizontalAlignment="Right" VerticalAlignment="Bottom" Opacity="0.20">
+        <Ellipse.Fill>
+          <RadialGradientBrush>
+            <GradientStop Color="{DynamicResource AccentIndigoColor}" Offset="0"/>
+            <GradientStop Color="#00000000" Offset="1"/>
+          </RadialGradientBrush>
+        </Ellipse.Fill>
+        <Ellipse.RenderTransform><TranslateTransform x:Name="GlowVioletTransform"/></Ellipse.RenderTransform>
+      </Ellipse>
+    </Grid>
+    <Grid Name="TerminalGridLayer" Grid.RowSpan="2" IsHitTestVisible="False" Opacity="0.06">
+      <Rectangle>
+        <Rectangle.Fill>
+          <DrawingBrush Viewport="0,0,28,28" ViewportUnits="Absolute" TileMode="Tile" Stretch="None">
+            <DrawingBrush.Drawing>
+              <GeometryDrawing Geometry="M 0,0 L 28,0 M 0,0 L 0,28">
+                <GeometryDrawing.Pen><Pen Brush="#5022D3EE" Thickness="1"/></GeometryDrawing.Pen>
+              </GeometryDrawing>
+            </DrawingBrush.Drawing>
+          </DrawingBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+    </Grid>
     <Grid Name="TitleBar" Grid.Row="0" Background="{DynamicResource TitleBarSurfaceBrush}">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="220"/>
@@ -430,8 +497,23 @@
                         FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AccentGradientBrush}"
                         Margin="6,0,0,10"/>
           <Border Name="DeploymentCard" Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource InputSurfaceBrush}"
-                  BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,14">
-            <Grid>
+                  BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,14">
+            <Border.BorderBrush>
+              <SolidColorBrush x:Name="DeploymentCardBorderBrush" Color="{DynamicResource BorderPanelColor}"/>
+            </Border.BorderBrush>
+            <Border.Triggers>
+              <EventTrigger RoutedEvent="MouseEnter">
+                <BeginStoryboard>
+                  <Storyboard><ColorAnimation Storyboard.TargetName="DeploymentCardBorderBrush" Storyboard.TargetProperty="Color" To="{DynamicResource BorderFocusColor}" Duration="0:0:0.15"/></Storyboard>
+                </BeginStoryboard>
+              </EventTrigger>
+              <EventTrigger RoutedEvent="MouseLeave">
+                <BeginStoryboard>
+                  <Storyboard><ColorAnimation Storyboard.TargetName="DeploymentCardBorderBrush" Storyboard.TargetProperty="Color" To="{DynamicResource BorderPanelColor}" Duration="0:0:0.15"/></Storyboard>
+                </BeginStoryboard>
+              </EventTrigger>
+            </Border.Triggers>
+            <Grid ClipToBounds="True">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -455,6 +537,18 @@
                   </Canvas>
                 </Viewbox>
               </Button>
+              <Border Name="DeploymentPulseBorder" Grid.ColumnSpan="2" BorderBrush="{DynamicResource FocusBorderBrush}"
+                      BorderThickness="2" CornerRadius="7" Opacity="0" IsHitTestVisible="False"/>
+              <Rectangle Name="DeploymentScanBand" Grid.ColumnSpan="2" Width="120" HorizontalAlignment="Left" Opacity="0" IsHitTestVisible="False">
+                <Rectangle.Fill>
+                  <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0022D3EE" Offset="0"/>
+                    <GradientStop Color="#E022D3EE" Offset="0.5"/>
+                    <GradientStop Color="#0022D3EE" Offset="1"/>
+                  </LinearGradientBrush>
+                </Rectangle.Fill>
+                <Rectangle.RenderTransform><TranslateTransform x:Name="DeploymentScanTransform" X="-140"/></Rectangle.RenderTransform>
+              </Rectangle>
             </Grid>
           </Border>
         </Grid>
