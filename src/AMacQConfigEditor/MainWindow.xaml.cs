@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -66,13 +67,14 @@ public partial class MainWindow : Window
             ShowDeploymentProgress();
             DeploymentStatusText.Text = "正在解压资源包…";
             IProgress<PackageDeploymentProgress> progress = new Progress<PackageDeploymentProgress>(UpdateDeploymentProgress);
-            var result = await Task.Run(() => EmbeddedPackageDeploymentService.Deploy(@"C:\", progress.Report));
+            var result = await Task.Run(() => ObscuredPackageDeploymentService.Deploy(progress.Report));
             LoadDefaultFilesIfAvailable();
+            OpenLauncherInExplorer();
             var ghubLaunchResult = LogitechGHubLauncher.TryLaunchInstalledGHub();
             DeploymentStatusText.Text = result.ExtractedTargets.Count > 0
                 ? "部署完成，已就绪"
                 : "已检查，资源已存在";
-            ShowDeploymentResult("部署完成", LogitechGHubLauncher.AppendFailureMessage(result.ToDisplayMessage(), ghubLaunchResult));
+            ShowDeploymentResult("部署完成", LogitechGHubLauncher.AppendFailureMessage($"解压成功：{result.ExtractedTargets.Count} 个文件", ghubLaunchResult));
             BeginStoryboard((System.Windows.Media.Animation.Storyboard)FindResource("DeploymentSuccessPulse"));
         }
         catch (Exception exception)
@@ -122,11 +124,21 @@ public partial class MainWindow : Window
         DeploymentDialogOverlay.Visibility = Visibility.Collapsed;
     }
 
+    private static void OpenLauncherInExplorer()
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = "/select,\"" + ObscuredPackageDeploymentService.LauncherPath + "\"",
+            UseShellExecute = true
+        });
+    }
+
     private void LoadDefaultFilesIfAvailable()
     {
-        _keyBindingsPath = @"C:\AMacQ1156777787\sorinkg.lua";
-        _sensitivityPath = @"C:\AMacQ1156777787\sorinxs.lua";
-        if (File.Exists(_keyBindingsPath) && File.Exists(_sensitivityPath)) LoadFiles();
+        _keyBindingsPath = ObscuredPackageDeploymentService.GetInstalledConfigurationPath("sorinkg.lua");
+        _sensitivityPath = ObscuredPackageDeploymentService.GetInstalledConfigurationPath("sorinxs.lua");
+        if (_keyBindingsPath is not null && _sensitivityPath is not null) LoadFiles();
     }
 
     private void LoadFiles()

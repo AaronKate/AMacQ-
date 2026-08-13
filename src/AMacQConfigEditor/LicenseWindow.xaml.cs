@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using AMacQConfigEditor.Licensing;
@@ -15,6 +16,7 @@ public partial class LicenseWindow : Window
     {
         InitializeComponent();
         TechnologyThemeService.ApplyRandomTheme(this);
+        SetWindowIcon();
         MachineCodeBox.Text = MachineCodeService.CurrentMachineCode;
         StatusText.Text = "请将机器码发送给授权方，然后导入返回的许可证文件。";
         ImportButton.Click += (_, _) => ImportLicense();
@@ -33,6 +35,17 @@ public partial class LicenseWindow : Window
         resetTimer.Start();
     }
 
+    private void SetWindowIcon()
+    {
+        using var iconStream = typeof(LicenseWindow).Assembly.GetManifestResourceStream("AMacQConfigEditor.Resources.AMacQ.ico");
+        if (iconStream is null) return;
+
+        var icon = BitmapFrame.Create(iconStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        icon.Freeze();
+        Icon = icon;
+        TitleBarIcon.Source = icon;
+    }
+
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton == MouseButton.Left) DragMove();
@@ -40,7 +53,7 @@ public partial class LicenseWindow : Window
 
     private void UpdateWindowClip()
     {
-        WindowShell.Clip = new RectangleGeometry(new Rect(0, 0, WindowShell.ActualWidth, WindowShell.ActualHeight), 16, 16);
+        WindowShell.Clip = new RectangleGeometry(new Rect(0, 0, WindowShell.ActualWidth, WindowShell.ActualHeight), 12, 12);
     }
 
     private void ImportLicense()

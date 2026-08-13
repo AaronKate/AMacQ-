@@ -502,22 +502,7 @@
                         FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource AccentGradientBrush}"
                         Margin="6,0,0,10"/>
           <Border Name="DeploymentCard" Grid.Row="1" Grid.ColumnSpan="3" Background="{DynamicResource InputSurfaceBrush}"
-                  BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,14">
-            <Border.BorderBrush>
-              <SolidColorBrush x:Name="DeploymentCardBorderBrush" Color="{DynamicResource BorderPanelColor}"/>
-            </Border.BorderBrush>
-            <Border.Triggers>
-              <EventTrigger RoutedEvent="MouseEnter">
-                <BeginStoryboard>
-                  <Storyboard><ColorAnimation Storyboard.TargetName="DeploymentCardBorderBrush" Storyboard.TargetProperty="Color" To="{DynamicResource BorderFocusColor}" Duration="0:0:0.15"/></Storyboard>
-                </BeginStoryboard>
-              </EventTrigger>
-              <EventTrigger RoutedEvent="MouseLeave">
-                <BeginStoryboard>
-                  <Storyboard><ColorAnimation Storyboard.TargetName="DeploymentCardBorderBrush" Storyboard.TargetProperty="Color" To="{DynamicResource BorderPanelColor}" Duration="0:0:0.15"/></Storyboard>
-                </BeginStoryboard>
-              </EventTrigger>
-            </Border.Triggers>
+                  BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,0,14">
             <Grid ClipToBounds="True">
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
