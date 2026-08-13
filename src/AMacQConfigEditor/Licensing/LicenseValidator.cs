@@ -30,6 +30,26 @@ internal static class LicenseValidator
             return LicenseValidationResult.Invalid("许可证签名无效。");
         }
     }
+
+    public static bool IsSignedLicenseExpired(string licenseJson, string machineCode, DateTime utcNow, string publicKeyXml)
+    {
+        var license = LicenseDocument.FromJson(licenseJson);
+        if (license is null || license.Version != "1" || license.Mode != "expires" || license.ExpiresUtc is null || string.IsNullOrWhiteSpace(license.Signature)) return false;
+        if (!string.Equals(license.MachineCode, machineCode, StringComparison.Ordinal)) return false;
+
+        try
+        {
+            using var rsa = new RSACryptoServiceProvider();
+            rsa.FromXmlString(publicKeyXml);
+            var signature = Convert.FromBase64String(license.Signature);
+            var signed = rsa.VerifyData(Encoding.UTF8.GetBytes(license.ToCanonicalPayload()), CryptoConfig.MapNameToOID("SHA256"), signature);
+            return signed && utcNow.ToUniversalTime() > license.ExpiresUtc.Value.ToUniversalTime();
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 }
 
 internal sealed record LicenseValidationResult(bool IsValid, string? Error)

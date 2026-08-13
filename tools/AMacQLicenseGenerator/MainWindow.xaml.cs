@@ -19,6 +19,8 @@ public partial class MainWindow : Window
         ExpiryCalendar.SelectedDate = DateTime.Today.AddYears(1);
         ApplyRandomTheme();
         SetLicenseMode(false);
+        Loaded += (_, _) => UpdateWindowClip();
+        SizeChanged += (_, _) => UpdateWindowClip();
     }
 
     private static string FindPrivateKeyPath()
@@ -63,9 +65,20 @@ public partial class MainWindow : Window
 
     private void ShowCalendar_Click(object sender, RoutedEventArgs e)
     {
+        OpenCalendar();
+    }
+
+    private void OpenCalendar()
+    {
         if (DateTime.TryParseExact(ExpiryDateBox.Text, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selectedDate))
             ExpiryCalendar.SelectedDate = selectedDate;
         CalendarPopup.IsOpen = true;
+    }
+
+    private void ExpiryDateBox_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        Dispatcher.BeginInvoke(new Action(OpenCalendar), System.Windows.Threading.DispatcherPriority.Input);
     }
 
     private void ExpiryCalendar_SelectedDatesChanged(object? sender, SelectionChangedEventArgs e)
@@ -100,6 +113,11 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { if (e.ChangedButton == MouseButton.Left) DragMove(); }
+
+    private void UpdateWindowClip()
+    {
+        WindowShell.Clip = new RectangleGeometry(new Rect(0, 0, WindowShell.ActualWidth, WindowShell.ActualHeight), 12, 12);
+    }
 
     private void ApplyRandomTheme()
     {
