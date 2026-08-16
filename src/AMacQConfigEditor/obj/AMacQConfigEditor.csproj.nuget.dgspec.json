@@ -1,0 +1,65 @@
+{
+  "format": 1,
+  "restore": {
+    "E:\\开发项目\\AMacQ\\src\\AMacQConfigEditor\\AMacQConfigEditor.csproj": {}
+  },
+  "projects": {
+    "E:\\开发项目\\AMacQ\\src\\AMacQConfigEditor\\AMacQConfigEditor.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "E:\\开发项目\\AMacQ\\src\\AMacQConfigEditor\\AMacQConfigEditor.csproj",
+        "projectName": "AMacQConfigEditor",
+        "projectPath": "E:\\开发项目\\AMacQ\\src\\AMacQConfigEditor\\AMacQConfigEditor.csproj",
+        "packagesPath": "C:\\Users\\wck\\.nuget\\packages\\",
+        "outputPath": "E:\\开发项目\\AMacQ\\src\\AMacQConfigEditor\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\wck\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net48"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {},
+          "https://mjnuget.zlsoft.cn/nuget": {}
+        },
+        "frameworks": {
+          "net48": {
+            "framework": "net48",
+            "targetAlias": "net48",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.400"
+      },
+      "frameworks": {
+        "net48": {
+          "framework": "net48",
+          "targetAlias": "net48",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400\\RuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "win-x86": {
+          "#import": []
+        }
+      }
+    }
+  }
+}

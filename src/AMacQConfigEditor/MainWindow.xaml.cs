@@ -13,6 +13,8 @@ using System.Windows.Threading;
 using AMacQConfigEditor.Licensing;
 using AMacQConfigEditor.Services;
 using AMacQConfigEditor.ViewModels;
+using Drawing = System.Drawing;
+using Forms = System.Windows.Forms;
 
 namespace AMacQConfigEditor;
 
@@ -24,6 +26,7 @@ public partial class MainWindow : Window
     private string? _sensitivityPath;
     private readonly DispatcherTimer _saveResetTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
     private readonly DispatcherTimer _weaponSearchTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+    private readonly Forms.NotifyIcon _trayIcon = new();
     private string _weaponSearchPrefix = string.Empty;
 
     public MainWindow()
@@ -32,13 +35,19 @@ public partial class MainWindow : Window
         TechnologyThemeService.ApplyRandomTheme(this);
         DataContext = _viewModel;
         SetWindowIcon();
+        ConfigureTrayIcon();
         UpdateLicenseStatus();
+        ObscuredPackageDeploymentService.RestoreRuntimeConfigurationFiles();
 
         DecompressBtn.Click += (_, _) => DeployEmbeddedPackage();
         DeploymentDialogCloseButton.Click += (_, _) => CloseDeploymentDialog();
+        HelpBtn.Click += (_, _) => HelpDialogOverlay.Visibility = Visibility.Visible;
+        HelpDialogCloseButton.Click += (_, _) => HelpDialogOverlay.Visibility = Visibility.Collapsed;
         SaveBtn.Click += (_, _) => SaveChanges();
-        MinimizeBtn.Click += (_, _) => WindowState = WindowState.Minimized;
+        MinimizeBtn.Click += (_, _) => HideToTray();
         CloseBtn.Click += (_, _) => Close();
+        Closing += (_, _) => ObscuredPackageDeploymentService.DisableRuntimeConfigurationFiles();
+        StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) HideToTray(); };
         WeaponList.SelectionChanged += (_, _) => SelectWeapon();
         WeaponList.PreviewTextInput += (_, args) => FindWeaponByPrefix(args);
         WeaponList.ItemContainerStyle = (Style)FindResource("WeaponListItem");
@@ -48,6 +57,46 @@ public partial class MainWindow : Window
         LoadDefaultFilesIfAvailable();
         _saveResetTimer.Tick += (_, _) => { SaveBtn.Content = "应用"; _saveResetTimer.Stop(); };
         _weaponSearchTimer.Tick += (_, _) => { _weaponSearchPrefix = string.Empty; _weaponSearchTimer.Stop(); };
+    }
+
+    private void ConfigureTrayIcon()
+    {
+        using var iconStream = typeof(MainWindow).Assembly.GetManifestResourceStream("AMacQConfigEditor.Resources.AMacQ.ico");
+        if (iconStream is null)
+        {
+            _trayIcon.Icon = Drawing.SystemIcons.Application;
+        }
+        else
+        {
+            using var icon = new Drawing.Icon(iconStream);
+            _trayIcon.Icon = (Drawing.Icon)icon.Clone();
+        }
+        _trayIcon.Text = "AMacQ Configuration Editor";
+        _trayIcon.ContextMenuStrip = new Forms.ContextMenuStrip();
+        _trayIcon.ContextMenuStrip.Items.Add("打开主窗口", null, (_, _) => RestoreFromTray());
+        _trayIcon.ContextMenuStrip.Items.Add("退出", null, (_, _) => Close());
+        _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
+        _trayIcon.Visible = true;
+    }
+
+    private void HideToTray()
+    {
+        Hide();
+        _trayIcon.ShowBalloonTip(2000, "AMacQ", "程序已最小化到系统托盘。双击图标可恢复窗口。", Forms.ToolTipIcon.Info);
+    }
+
+    private void RestoreFromTray()
+    {
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+    }
+
+    protected override void OnClosed(EventArgs eventArgs)
+    {
+        _trayIcon.Visible = false;
+        _trayIcon.Dispose();
+        base.OnClosed(eventArgs);
     }
 
     private void UpdateLicenseStatus()
