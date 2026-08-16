@@ -1,5 +1,5 @@
 ﻿AMacQConfigEditor
-1.0.0.0
+
 
 winexe
 C#
@@ -12,7 +12,7 @@ TRACE;DEBUG;NETFRAMEWORK;NET48;NET30_OR_GREATER;NET35_OR_GREATER;NET40_OR_GREATE
 E:\开发项目\AMacQ\src\AMacQConfigEditor\App.xaml
 2-1432877300
 
-22658359523
+20-1529541234
 211882556599
 LicenseWindow.xaml;MainWindow.xaml;
 

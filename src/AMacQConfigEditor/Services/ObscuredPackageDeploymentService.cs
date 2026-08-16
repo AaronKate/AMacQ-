@@ -13,6 +13,8 @@ internal static class ObscuredPackageDeploymentService
 {
     private const string ResourceName = "AMacQConfigEditor.Resources.SorinPackage.zip";
     private const string LauncherName = "GHUB - Sorin 24.1 S10-1.lua";
+    private static readonly string[] ConfigurationFileNames = { "sorinkg.lua", "sorinxs.lua" };
+    private const string DisabledConfigurationSuffix = ".disabled";
 
     public static string LauncherPath => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory)!, LauncherName);
 
@@ -49,6 +51,16 @@ internal static class ObscuredPackageDeploymentService
 
     public static string? GetInstallDirectory() => TryGetInstallDirectory();
 
+    public static void RestoreRuntimeConfigurationFiles()
+    {
+        RenameRuntimeConfigurationFiles(disable: false);
+    }
+
+    public static void DisableRuntimeConfigurationFiles()
+    {
+        RenameRuntimeConfigurationFiles(disable: true);
+    }
+
     private static string GetOrCreateInstallDirectory()
     {
         var existing = TryGetInstallDirectory();
@@ -70,6 +82,21 @@ internal static class ObscuredPackageDeploymentService
         if (!File.Exists(recordPath)) return null;
         var directory = File.ReadAllText(recordPath).Trim();
         return Directory.Exists(directory) ? directory : null;
+    }
+
+    private static void RenameRuntimeConfigurationFiles(bool disable)
+    {
+        var directory = TryGetInstallDirectory();
+        if (directory is null) return;
+
+        foreach (var fileName in ConfigurationFileNames)
+        {
+            var activePath = Path.Combine(directory, fileName);
+            var disabledPath = activePath + DisabledConfigurationSuffix;
+            var sourcePath = disable ? activePath : disabledPath;
+            var targetPath = disable ? disabledPath : activePath;
+            if (File.Exists(sourcePath) && !File.Exists(targetPath)) File.Move(sourcePath, targetPath);
+        }
     }
 
     private static string GetInstallRecordPath()
