@@ -735,7 +735,8 @@
             <Button Name="GuideImageCloseButton" Content="关闭" Style="{StaticResource PrimaryButton}"
                     Background="{StaticResource AccentGradientBrush}" Foreground="{DynamicResource AccentForegroundBrush}"
                     Padding="24,8" Margin="0,12,0,0" HorizontalAlignment="Right" DockPanel.Dock="Bottom"/>
-            <ScrollViewer Name="GuideImageScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer Name="GuideImageScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                          PreviewMouseWheel="ZoomGuideImage">
               <Image Name="GuideImagePreview" Stretch="Uniform" Cursor="Hand"
                      MouseLeftButtonDown="BeginGuideImageDrag" MouseMove="DragGuideImage" MouseLeftButtonUp="EndGuideImageDrag"/>
             </ScrollViewer>
