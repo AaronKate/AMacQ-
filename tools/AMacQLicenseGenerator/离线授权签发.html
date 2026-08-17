@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AMacQ 离线授权签发</title>
+  <style>
+    :root { color-scheme: dark; font-family: "SF Pro Display", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    * { -webkit-tap-highlight-color: transparent; }
+    body { position: relative; isolation: isolate; overflow-x: hidden; margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 36px 0; background: radial-gradient(circle at 20% 10%, #16365f 0, transparent 30%), radial-gradient(circle at 85% 86%, #263783 0, transparent 32%), linear-gradient(145deg, #06101f 0%, #101d3b 48%, #071321 100%); color: #f4f8ff; }
+    body::before, body::after { content: ""; position: fixed; z-index: -1; border-radius: 999px; filter: blur(20px); opacity: .72; pointer-events: none; }
+    body::before { width: 310px; height: 310px; top: -105px; right: -60px; background: radial-gradient(circle at 32% 32%, #77dcff, #4269ff 42%, transparent 70%); }
+    body::after { width: 370px; height: 370px; bottom: -165px; left: -120px; background: radial-gradient(circle at 52% 52%, #77a0ff, #775bf5 38%, transparent 70%); }
+    main { position: relative; overflow: hidden; width: min(620px, calc(100% - 40px)); padding: 34px; border: 1px solid rgb(198 227 255 / 36%); border-radius: 30px; background: linear-gradient(135deg, rgb(255 255 255 / 18%), rgb(123 167 255 / 9%)); box-shadow: inset 0 1px 0 rgb(255 255 255 / 40%), inset 16px 18px 30px rgb(255 255 255 / 3%), 0 30px 80px rgb(0 7 28 / 52%); backdrop-filter: blur(28px) saturate(145%); -webkit-backdrop-filter: blur(28px) saturate(145%); }
+    main::before { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: linear-gradient(120deg, rgb(255 255 255 / 15%), transparent 23%, transparent 72%, rgb(150 206 255 / 10%)); }
+    h1 { position: relative; margin: 0 0 8px; font-size: 25px; letter-spacing: -.6px; text-shadow: 0 1px 12px rgb(200 229 255 / 35%); } p, .hint { position: relative; color: #c1d3ed; line-height: 1.65; }
+    label { position: relative; display: block; margin: 20px 0 8px; font-weight: 650; letter-spacing: .1px; }
+    input, select, button { box-sizing: border-box; width: 100%; border-radius: 8px; font: inherit; }
+    input, select { position: relative; padding: 13px 14px; border: 1px solid rgb(159 205 255 / 40%); outline: none; background: rgb(3 14 33 / 42%); box-shadow: inset 0 1px 1px rgb(0 0 0 / 26%), 0 1px 0 rgb(255 255 255 / 8%); color: inherit; transition: border-color .2s, background .2s, box-shadow .2s; }
+    input:focus, select:focus { border-color: #82ccff; background: rgb(8 30 61 / 66%); box-shadow: 0 0 0 4px rgb(87 174 255 / 18%), inset 0 1px 1px rgb(0 0 0 / 26%); }
+    input::file-selector-button { margin: -7px 12px -7px -8px; padding: 9px 12px; border: 1px solid rgb(255 255 255 / 26%); border-radius: 8px; background: rgb(255 255 255 / 14%); color: #f4f8ff; font: inherit; cursor: pointer; }
+    button { position: relative; overflow: hidden; margin-top: 28px; padding: 14px; border: 1px solid rgb(230 244 255 / 44%); background: linear-gradient(112deg, #39b5ff 0%, #6b87ff 46%, #a271ff 100%); box-shadow: inset 0 1px 1px rgb(255 255 255 / 54%), inset 0 -12px 24px rgb(62 68 211 / 22%), 0 12px 24px rgb(53 111 255 / 25%); color: white; font-weight: 750; letter-spacing: .3px; cursor: pointer; transition: transform .18s, filter .18s; }
+    button::before { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, rgb(255 255 255 / 34%), transparent 28%, transparent 65%, rgb(255 255 255 / 18%)); pointer-events: none; }
+    button:active { transform: scale(.985); filter: brightness(.94); } button:disabled { opacity: .55; cursor: wait; } #expiryArea { display: none; } #status { position: relative; min-height: 24px; margin: 16px 0 0; color: #d3e4ff; white-space: pre-wrap; }
+    .warning { position: relative; margin-top: 26px; padding: 14px 15px; border: 1px solid rgb(255 209 114 / 36%); border-radius: 15px; background: linear-gradient(135deg, rgb(255 191 82 / 18%), rgb(135 83 17 / 13%)); box-shadow: inset 0 1px 0 rgb(255 239 191 / 16%); color: #ffe6ac; font-size: 13px; line-height: 1.65; }
+    @media (max-width: 520px) { body { padding: 18px 0; } main { width: min(100% - 24px, 620px); padding: 25px 20px; border-radius: 25px; } h1 { font-size: 23px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>AMacQ 离线授权签发</h1>
+  <p>选择仅保存在你电脑上的 RSA 私钥，输入客户机器码后生成许可证文件。</p>
+
+  <label for="privateKey">RSA 私钥（XML）</label>
+  <!-- 部分安卓文件选择器不会将 XML 识别为 text/xml；允许所有类型以确保能选到私钥。 -->
+  <input id="privateKey" type="file" accept="*/*">
+
+  <label for="machineCode">客户机器码</label>
+  <input id="machineCode" autocomplete="off" spellcheck="false" maxlength="64" placeholder="粘贴 64 位机器码">
+
+  <label for="mode">授权类型</label>
+  <select id="mode"><option value="perpetual">永久授权</option><option value="expires">限时授权</option></select>
+
+  <div id="expiryArea">
+    <label for="expiry">到期日期（当天 23:59:59 到期）</label>
+    <input id="expiry" type="date">
+  </div>
+
+  <button id="generate">生成许可证文件</button>
+  <div id="status" role="status"></div>
+  <div class="warning">私钥绝不能发送给客户、上传网盘或提交到 Git。此文件仅供授权方离线使用；生成许可证后可安全地将许可证 JSON 发送给客户。</div>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const mode = $('mode'), expiryArea = $('expiryArea'), status = $('status'), generate = $('generate');
+  $('expiry').value = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+  mode.addEventListener('change', () => expiryArea.style.display = mode.value === 'expires' ? 'block' : 'none');
+
+  const toBase64Url = text => text.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  function xmlValue(xml, name) {
+    const value = xml.querySelector(name)?.textContent?.trim();
+    if (!value) throw new Error(`私钥缺少 ${name} 字段。`);
+    return toBase64Url(value);
+  }
+  async function importPrivateKey(xmlText) {
+    const documentXml = new DOMParser().parseFromString(xmlText, 'application/xml');
+    if (documentXml.querySelector('parsererror')) throw new Error('私钥 XML 格式无效。');
+    const key = { kty: 'RSA', n: xmlValue(documentXml, 'Modulus'), e: xmlValue(documentXml, 'Exponent'), d: xmlValue(documentXml, 'D'), p: xmlValue(documentXml, 'P'), q: xmlValue(documentXml, 'Q'), dp: xmlValue(documentXml, 'DP'), dq: xmlValue(documentXml, 'DQ'), qi: xmlValue(documentXml, 'InverseQ'), ext: true, key_ops: ['sign'] };
+    return crypto.subtle.importKey('jwk', key, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  }
+  function base64(bytes) {
+    let binary = ''; bytes.forEach(byte => binary += String.fromCharCode(byte)); return btoa(binary);
+  }
+  function canonicalUtcForDate(dateString) {
+    const date = new Date(`${dateString}T23:59:59.999Z`);
+    if (Number.isNaN(date.getTime())) throw new Error('请选择有效的到期日期。');
+    return date.toISOString().replace('Z', '0000Z');
+  }
+  function download(name, contents) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([contents], { type: 'application/json;charset=utf-8' }));
+    link.download = name; link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+  generate.addEventListener('click', async () => {
+    try {
+      if (!window.crypto?.subtle) throw new Error('当前浏览器不支持 Web Crypto，请使用最新版 Edge 或 Chrome 打开。');
+      const file = $('privateKey').files[0];
+      if (!file) throw new Error('请选择 RSA 私钥 XML。');
+      const machineCode = $('machineCode').value.trim().toUpperCase();
+      if (!/^[0-9A-F]{64}$/.test(machineCode)) throw new Error('机器码必须是 64 位十六进制字符。');
+      const expiresUtc = mode.value === 'expires' ? canonicalUtcForDate($('expiry').value) : '';
+      const payload = `1\n${machineCode}\n${mode.value}\n${expiresUtc}`;
+      generate.disabled = true; status.textContent = '正在签名…';
+      const privateKey = await importPrivateKey(await file.text());
+      const signature = base64(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, new TextEncoder().encode(payload))));
+      // DataContractJsonSerializer 使用 /Date(UnixMilliseconds)/ 表示 DateTime。
+      const license = { version: '1', machineCode, mode: mode.value, expiresUtc: expiresUtc ? `/Date(${Date.parse(expiresUtc)})/` : null, signature };
+      download(`AMacQ-license-${machineCode.slice(0, 8)}.json`, JSON.stringify(license));
+      status.textContent = '许可证已生成。请将下载的 JSON 文件发送给对应客户导入。';
+    } catch (error) { status.textContent = `签发失败：${error.message || error}`; }
+    finally { generate.disabled = false; }
+  });
+})();
+</script>
+</body>
+</html>
