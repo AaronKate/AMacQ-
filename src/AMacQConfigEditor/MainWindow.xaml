@@ -728,7 +728,7 @@
       </Grid>
       <Grid Name="GuideImageOverlay" Grid.RowSpan="2" Background="#D906101D" Visibility="Collapsed" Panel.ZIndex="12"
             MouseLeftButtonUp="CloseGuideImageWhenBackgroundClicked">
-        <Border MaxWidth="800" MaxHeight="540" Padding="16" Background="{DynamicResource PopupSurfaceBrush}"
+        <Border Width="800" Height="540" Padding="16" Background="{DynamicResource PopupSurfaceBrush}"
                 BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="12"
                 HorizontalAlignment="Center" VerticalAlignment="Center">
           <DockPanel LastChildFill="True">
