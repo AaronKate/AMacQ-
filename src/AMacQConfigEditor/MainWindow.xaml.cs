@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         DeploymentDialogCloseButton.Click += (_, _) => CloseDeploymentDialog();
         HelpBtn.Click += (_, _) => HelpDialogOverlay.Visibility = Visibility.Visible;
         HelpDialogCloseButton.Click += (_, _) => HelpDialogOverlay.Visibility = Visibility.Collapsed;
+        GuideImageCloseButton.Click += (_, _) => CloseGuideImage();
         SaveBtn.Click += (_, _) => SaveChanges();
         MinimizeBtn.Click += (_, _) => HideToTray();
         CloseBtn.Click += (_, _) => Close();
@@ -171,6 +172,26 @@ public partial class MainWindow : Window
     private void CloseDeploymentDialog()
     {
         DeploymentDialogOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void OpenGuideImage(object sender, MouseButtonEventArgs eventArgs)
+    {
+        if (sender is not Image image || image.Source is null) return;
+
+        GuideImagePreview.Source = image.Source;
+        GuideImageOverlay.Visibility = Visibility.Visible;
+        eventArgs.Handled = true;
+    }
+
+    private void CloseGuideImageWhenBackgroundClicked(object sender, MouseButtonEventArgs eventArgs)
+    {
+        if (ReferenceEquals(eventArgs.OriginalSource, GuideImageOverlay)) CloseGuideImage();
+    }
+
+    private void CloseGuideImage()
+    {
+        GuideImageOverlay.Visibility = Visibility.Collapsed;
+        GuideImagePreview.Source = null;
     }
 
     private static void OpenLauncherInExplorer()
