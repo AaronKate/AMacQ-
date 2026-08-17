@@ -1,6 +1,6 @@
 is_global = true
 build_property.RootNamespace = AMacQConfigEditor
-build_property.ProjectDir = E:\开发项目\AMacQ\src\AMacQConfigEditor\
+build_property.ProjectDir = D:\开发项目\AMacQ配置编辑器\src\AMacQConfigEditor\
 build_property.EnableComHosting = 
 build_property.EnableGeneratedComInterfaceComImportInterop = 
 build_property.CsWinRTUseWindowsUIXamlProjections = false
