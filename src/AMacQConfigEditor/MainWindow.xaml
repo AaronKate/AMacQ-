@@ -124,18 +124,24 @@
         <Setter.Value>
           <ControlTemplate TargetType="ScrollBar">
             <Border Background="{TemplateBinding Background}" CornerRadius="5" Margin="1">
-              <Track x:Name="PART_Track" IsDirectionReversed="True">
+              <Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}" IsDirectionReversed="True">
                 <Track.DecreaseRepeatButton>
-                  <RepeatButton Command="ScrollBar.PageUpCommand" Style="{StaticResource DarkScrollTrackButton}"/>
+                  <RepeatButton x:Name="DecreaseTrackButton" Command="ScrollBar.PageUpCommand" Style="{StaticResource DarkScrollTrackButton}"/>
                 </Track.DecreaseRepeatButton>
                 <Track.Thumb>
                   <Thumb Style="{StaticResource DarkScrollThumb}"/>
                 </Track.Thumb>
                 <Track.IncreaseRepeatButton>
-                  <RepeatButton Command="ScrollBar.PageDownCommand" Style="{StaticResource DarkScrollTrackButton}"/>
+                  <RepeatButton x:Name="IncreaseTrackButton" Command="ScrollBar.PageDownCommand" Style="{StaticResource DarkScrollTrackButton}"/>
                 </Track.IncreaseRepeatButton>
               </Track>
             </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="Orientation" Value="Horizontal">
+                <Setter TargetName="DecreaseTrackButton" Property="Command" Value="{x:Static ScrollBar.PageLeftCommand}"/>
+                <Setter TargetName="IncreaseTrackButton" Property="Command" Value="{x:Static ScrollBar.PageRightCommand}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
