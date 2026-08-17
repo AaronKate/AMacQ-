@@ -1,0 +1,17 @@
+E:\开发项目\AMacQ\dist\net48\AMacQConfigEditor.exe.config
+E:\开发项目\AMacQ\dist\net48\AMacQConfigEditor.exe
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor.csproj.AssemblyReference.cache
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\LicenseWindow.baml
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\MainWindow.baml
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\LicenseWindow.g.cs
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\MainWindow.g.cs
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\App.g.cs
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor_MarkupCompile.cache
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor.g.resources
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor.GeneratedMSBuildEditorConfig.editorconfig
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor.AssemblyInfoInputs.cache
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor.AssemblyInfo.cs
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor.csproj.CoreCompileInputs.cache
+E:\开发项目\AMacQ\src\AMacQConfigEditor\obj\Release\net48\AMacQConfigEditor.exe
+E:\开发项目\AMacQ\author-tools\build\AMacQConfigEditor.exe.config
+E:\开发项目\AMacQ\author-tools\build\AMacQConfigEditor.exe
