@@ -67,6 +67,12 @@ dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 
 作者在本机保存 `author-tools\AMacQLicense.private.xml` 私钥文件，绝不能提交、发送或打包此文件。双击根目录的 `启动授权签发工具.cmd` 可打开签发界面。
 
+也可以使用无需安装的离线网页签发器：用 Edge 或 Chrome 打开 `tools\AMacQLicenseGenerator\离线授权签发.html`，选择私钥 XML、粘贴客户机器码并生成许可证 JSON。网页不会上传任何数据；私钥仅在本机浏览器内用于签名。该 HTML 同样属于作者工具，不能发送给客户。
+
+### GitHub Pages 发布
+
+仓库根目录的 `index.html` 会跳转至离线网页签发器。推送到 GitHub 后，在仓库 **Settings → Pages** 中选择 **Deploy from a branch**、`main` 分支和 `/(root)` 目录，保存后通过 `https://<GitHub 用户名>.github.io/<仓库名>/` 打开。私钥文件绝不能提交到仓库。
+
 ```powershell
 tools\AMacQLicenseGenerator\bin\Release\net48\AMacQLicenseGenerator.exe .\AMacQLicense.private.xml D:\licenses\user-license.json <机器码> perpetual
 ```
