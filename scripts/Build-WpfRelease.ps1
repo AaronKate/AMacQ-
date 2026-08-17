@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Invoke-Obfuscation.ps1')
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $projectRoot 'src\AMacQConfigEditor\AMacQConfigEditor.csproj'
@@ -95,10 +96,8 @@ if (!(Test-Path -LiteralPath $executablePath)) {
     throw "构建未生成主程序：$executablePath"
 }
 
-$configurationPath = "$executablePath.config"
-if (Test-Path -LiteralPath $configurationPath) {
-    Remove-Item -LiteralPath $configurationPath -Force
-}
+# The build writes AMacQConfigEditor.exe.config before the EXE is renamed.
+Get-ChildItem -LiteralPath $outputPath -Filter '*.exe.config' -File | Remove-Item -Force
 
 $expectedFiles = @('AMacQ配置编辑器-验证版.exe', 'AMacQ配置编辑器-作者版.exe')
 $expectedFiles = @($verificationFileName, $authorFileName)
@@ -106,6 +105,9 @@ $unexpectedFiles = @(Get-ChildItem -LiteralPath $outputPath -File | Where-Object
 if ($unexpectedFiles.Count -gt 0) {
     throw "发布目录包含意外文件：$($unexpectedFiles.Name -join ', ')"
 }
+
+Invoke-ApplicationObfuscation -ApplicationPath $applicationPath
+Invoke-ApplicationObfuscation -ApplicationPath $authorApplicationPath
 
 $(Get-Item -LiteralPath $executablePath).LastWriteTime = Get-Date
 
