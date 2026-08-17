@@ -28,6 +28,9 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _weaponSearchTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly Forms.NotifyIcon _trayIcon = new();
     private string _weaponSearchPrefix = string.Empty;
+    private Point? _guideImageDragStart;
+    private double _guideImageDragHorizontalOffset;
+    private double _guideImageDragVerticalOffset;
 
     public MainWindow()
     {
@@ -190,8 +193,36 @@ public partial class MainWindow : Window
 
     private void CloseGuideImage()
     {
+        EndGuideImageDrag();
         GuideImageOverlay.Visibility = Visibility.Collapsed;
         GuideImagePreview.Source = null;
+    }
+
+    private void BeginGuideImageDrag(object sender, MouseButtonEventArgs eventArgs)
+    {
+        _guideImageDragStart = eventArgs.GetPosition(GuideImageScrollViewer);
+        _guideImageDragHorizontalOffset = GuideImageScrollViewer.HorizontalOffset;
+        _guideImageDragVerticalOffset = GuideImageScrollViewer.VerticalOffset;
+        GuideImagePreview.CaptureMouse();
+        GuideImagePreview.Cursor = Cursors.SizeAll;
+        eventArgs.Handled = true;
+    }
+
+    private void DragGuideImage(object sender, MouseEventArgs eventArgs)
+    {
+        if (_guideImageDragStart is null || eventArgs.LeftButton != MouseButtonState.Pressed) return;
+
+        var currentPosition = eventArgs.GetPosition(GuideImageScrollViewer);
+        GuideImageScrollViewer.ScrollToHorizontalOffset(_guideImageDragHorizontalOffset - (currentPosition.X - _guideImageDragStart.Value.X));
+        GuideImageScrollViewer.ScrollToVerticalOffset(_guideImageDragVerticalOffset - (currentPosition.Y - _guideImageDragStart.Value.Y));
+    }
+
+    private void EndGuideImageDrag(object? sender = null, MouseButtonEventArgs? eventArgs = null)
+    {
+        _guideImageDragStart = null;
+        if (GuideImagePreview.IsMouseCaptured) GuideImagePreview.ReleaseMouseCapture();
+        GuideImagePreview.Cursor = Cursors.Hand;
+        if (eventArgs is not null) eventArgs.Handled = true;
     }
 
     private static void OpenLauncherInExplorer()
