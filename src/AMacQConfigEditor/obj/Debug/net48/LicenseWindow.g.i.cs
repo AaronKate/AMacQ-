@@ -116,7 +116,7 @@ namespace AMacQConfigEditor {
                 return;
             }
             _contentLoaded = true;
-            System.Uri resourceLocater = new System.Uri("/AMacQConfigEditor;V1.0.0.0;component/licensewindow.xaml", System.UriKind.Relative);
+            System.Uri resourceLocater = new System.Uri("/AMacQConfigEditor;component/licensewindow.xaml", System.UriKind.Relative);
             
             #line 1 "..\..\..\LicenseWindow.xaml"
             System.Windows.Application.LoadComponent(this, resourceLocater);

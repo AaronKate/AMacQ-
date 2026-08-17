@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AMacQConfigEditor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f2b415002cb505527f2cb01ed394af0c1097a5ed")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b65783e45c75fba03898742bde3f34d4c8e09394")]
 [assembly: System.Reflection.AssemblyProductAttribute("AMacQConfigEditor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AMacQConfigEditor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
