@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Invoke-Obfuscation.ps1')
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $projectPath = Join-Path $projectRoot 'src\AMacQConfigEditor\AMacQConfigEditor.csproj'
@@ -20,6 +21,9 @@ Move-Item -LiteralPath (Join-Path $authorBuildPath 'AMacQConfigEditor.exe') -Des
 Remove-Item -LiteralPath $authorBuildPath -Recurse -Force
 
 Get-ChildItem -LiteralPath $outputPath -Filter '*.exe.config' -File | Remove-Item -Force
+
+Invoke-ApplicationObfuscation -ApplicationPath (Join-Path $outputPath $verificationFileName)
+Invoke-ApplicationObfuscation -ApplicationPath (Join-Path $outputPath $authorFileName)
 
 Write-Host "Created: $(Join-Path $outputPath $verificationFileName)"
 Write-Host "Created: $(Join-Path $outputPath $authorFileName)"
