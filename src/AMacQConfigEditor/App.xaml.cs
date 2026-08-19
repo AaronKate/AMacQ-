@@ -75,7 +75,7 @@ public partial class App : Application
         if (!string.IsNullOrWhiteSpace(licenseJson)
             && LicenseValidator.IsSignedLicenseExpired(licenseJson!, MachineCodeService.CurrentMachineCode, System.DateTime.UtcNow, LicenseValidator.PublicKeyXml))
         {
-            ExpiredLicenseCleanupService.RemoveRuntimeConfigurationFiles();
+            ExpiredLicenseCleanupService.DisableRuntimeConfigurationFiles();
         }
     }
 }
