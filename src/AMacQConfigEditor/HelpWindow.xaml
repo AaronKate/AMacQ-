@@ -327,6 +327,8 @@
                     <TextBlock Text="重要提醒" FontSize="15" FontWeight="SemiBold" Foreground="#FFD08A"/>
                     <TextBlock Text="请在大战场模式下现场调整，不要在靶场中测试，防止被官方标记进小黑屋。" TextWrapping="Wrap"
                                FontSize="13" Foreground="#FFE8C9" Margin="0,8,0,0" LineHeight="22"/>
+                    <TextBlock Text="压枪幅度别调太狠，系统会检测历史枪法和 KD，幅度过大会引起注意。" TextWrapping="Wrap"
+                               FontSize="13" Foreground="#FFE8C9" Margin="0,8,0,0" LineHeight="22"/>
                   </StackPanel>
                 </Border>
                 <Border Background="{DynamicResource InputSurfaceBrush}" BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="7" Padding="16">
