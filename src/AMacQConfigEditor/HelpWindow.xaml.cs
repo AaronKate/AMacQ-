@@ -1,8 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Navigation;
 
 namespace AMacQConfigEditor;
 
@@ -33,6 +35,12 @@ public partial class HelpWindow : Window
                 Resources[key] = color;
             }
         }
+    }
+
+    private void OpenExternalLink(object sender, RequestNavigateEventArgs eventArgs)
+    {
+        Process.Start(new ProcessStartInfo(eventArgs.Uri.AbsoluteUri) { UseShellExecute = true });
+        eventArgs.Handled = true;
     }
 
     private void OpenGuideImage(object sender, MouseButtonEventArgs eventArgs)
