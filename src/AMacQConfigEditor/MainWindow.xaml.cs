@@ -119,6 +119,8 @@ public partial class MainWindow : Window
             LoadDefaultFilesIfAvailable();
             OpenLauncherInExplorer();
             var ghubLaunchResult = LogitechGHubLauncher.TryLaunchInstalledGHub();
+            if (!ghubLaunchResult.IsLaunched)
+                LogitechGHubLauncher.OpenDownloadPage();
             DeploymentStatusText.Text = result.ExtractedTargets.Count > 0
                 ? "部署完成，已就绪"
                 : "已检查，资源已存在";

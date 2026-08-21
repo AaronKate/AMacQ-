@@ -7,7 +7,8 @@ namespace AMacQConfigEditor.Services;
 
 internal sealed class LogitechGHubLauncher
 {
-    private const string FailureMessage = "未能打开 Logitech G HUB，请确认已安装。";
+    public const string GHubDownloadUrl = "https://download01.logi.com/web/ftp/pub/techsupport/gaming/lghub_installer.exe";
+    private const string FailureMessage = "未检测到 Logitech G HUB，已为您打开浏览器下载页面，请安装后重新部署。";
     private readonly Func<string, string?> _getEnvironmentVariable;
     private readonly Func<string, bool> _fileExists;
     private readonly Action<string> _startProcess;
@@ -36,6 +37,18 @@ internal sealed class LogitechGHubLauncher
         return launchResult.IsLaunched
             ? deploymentMessage
             : $"{deploymentMessage}{Environment.NewLine}{launchResult.FailureMessage}";
+    }
+
+    public static void OpenDownloadPage()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(GHubDownloadUrl) { UseShellExecute = true });
+        }
+        catch (Exception)
+        {
+            // 打开浏览器失败时静默处理，不影响部署结果
+        }
     }
 
     public LogitechGHubLaunchResult TryLaunch()

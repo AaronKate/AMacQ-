@@ -264,6 +264,17 @@
           <TabItem Header="导入步骤" Style="{StaticResource DarkTabItem}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
               <StackPanel Margin="0,0,12,0">
+                <TextBlock Text="准备工作：安装罗技驱动" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                <TextBlock Text="本脚本基于罗技鼠标的官方软件（罗技 G HUB）运行，使用前请先下载并安装驱动：" TextWrapping="Wrap"
+                           FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,6,0,8"/>
+                <TextBlock Margin="0,0,0,18">
+                  <Hyperlink NavigateUri="https://download01.logi.com/web/ftp/pub/techsupport/gaming/lghub_installer.exe"
+                             RequestNavigate="OpenExternalLink"
+                             Foreground="#22D3EE" TextDecorations="Underline">
+                    <Run Text="https://download01.logi.com/web/ftp/pub/techsupport/gaming/lghub_installer.exe"/>
+                  </Hyperlink>
+                </TextBlock>
+
                 <TextBlock Text="验证宏是否生效" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
                 <TextBlock Text="按住鼠标左键，或按住右键再按左键，如果看到鼠标自动往下滑，说明宏已生效。" TextWrapping="Wrap"
                            FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,6,0,18"/>
