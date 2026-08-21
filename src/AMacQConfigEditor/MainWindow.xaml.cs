@@ -39,8 +39,22 @@ public partial class MainWindow : Window
         UpdateLicenseStatus();
         ObscuredPackageDeploymentService.RestoreRuntimeConfigurationFiles();
 
-        DecompressBtn.Click += (_, _) => DeployEmbeddedPackage();
+        DecompressBtn.Click += (_, _) =>
+        {
+            if (!LogitechGHubLauncher.IsInstalled())
+            {
+                ConfirmOpenDownloadPage();
+                return;
+            }
+            DeployEmbeddedPackage();
+        };
         DeploymentDialogCloseButton.Click += (_, _) => CloseDeploymentDialog();
+        DownloadConfirmCancelButton.Click += (_, _) => DownloadConfirmOverlay.Visibility = Visibility.Collapsed;
+        DownloadConfirmOkButton.Click += (_, _) =>
+        {
+            DownloadConfirmOverlay.Visibility = Visibility.Collapsed;
+            LogitechGHubLauncher.OpenDownloadPage();
+        };
         HelpBtn.Click += (_, _) => new HelpWindow(this).ShowDialog();
         SaveBtn.Click += (_, _) => SaveChanges();
         MinimizeBtn.Click += (_, _) => HideToTray();
@@ -172,6 +186,11 @@ public partial class MainWindow : Window
     private void CloseDeploymentDialog()
     {
         DeploymentDialogOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void ConfirmOpenDownloadPage()
+    {
+        DownloadConfirmOverlay.Visibility = Visibility.Visible;
     }
 
     private static void OpenLauncherInExplorer()

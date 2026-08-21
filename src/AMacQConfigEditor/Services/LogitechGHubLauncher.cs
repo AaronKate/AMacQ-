@@ -32,6 +32,15 @@ internal sealed class LogitechGHubLauncher
             .TryLaunch();
     }
 
+    public static bool IsInstalled()
+    {
+        return new LogitechGHubLauncher(
+            Environment.GetEnvironmentVariable,
+            File.Exists,
+            _ => { })
+            .FindGHubExecutable() is not null;
+    }
+
     public static string AppendFailureMessage(string deploymentMessage, LogitechGHubLaunchResult launchResult)
     {
         return launchResult.IsLaunched
@@ -55,15 +64,7 @@ internal sealed class LogitechGHubLauncher
     {
         try
         {
-            var executablePath = new[]
-            {
-                _getEnvironmentVariable("ProgramFiles"),
-                _getEnvironmentVariable("ProgramFiles(x86)")
-            }
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Select(path => Path.Combine(path!, "LGHUB", "lghub.exe"))
-            .FirstOrDefault(_fileExists);
-
+            var executablePath = FindGHubExecutable();
             if (executablePath is null)
                 return new LogitechGHubLaunchResult(false, FailureMessage);
 
@@ -74,6 +75,18 @@ internal sealed class LogitechGHubLauncher
         {
             return new LogitechGHubLaunchResult(false, FailureMessage);
         }
+    }
+
+    private string? FindGHubExecutable()
+    {
+        return new[]
+        {
+            _getEnvironmentVariable("ProgramFiles"),
+            _getEnvironmentVariable("ProgramFiles(x86)")
+        }
+        .Where(path => !string.IsNullOrWhiteSpace(path))
+        .Select(path => Path.Combine(path!, "LGHUB", "lghub.exe"))
+        .FirstOrDefault(_fileExists);
     }
 }
 

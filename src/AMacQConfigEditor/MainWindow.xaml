@@ -664,6 +664,26 @@
           </StackPanel>
         </Border>
       </Grid>
+      <Grid Name="DownloadConfirmOverlay" Grid.RowSpan="2" Background="#9A06101D" Visibility="Collapsed" Panel.ZIndex="11">
+        <Border Width="420" Padding="24" Background="{DynamicResource PopupSurfaceBrush}"
+                BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="12"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+          <StackPanel>
+            <TextBlock Text="未检测到罗技驱动" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}"/>
+            <TextBlock Text="未检测到罗技 G HUB 驱动。点击“下载”将打开浏览器自动下载安装包，安装完成后请重新点击部署。" TextWrapping="Wrap"
+                       FontSize="12" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,8,0,16"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <Button Name="DownloadConfirmCancelButton" Content="取消" Style="{StaticResource PrimaryButton}"
+                      Background="Transparent" BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1"
+                      Foreground="{DynamicResource SecondaryTextBrush}" Padding="20,8" Margin="0,0,10,0"/>
+              <Button Name="DownloadConfirmOkButton" Content="下载" Style="{StaticResource PrimaryButton}"
+                      Background="{StaticResource AccentGradientBrush}" Foreground="{DynamicResource AccentForegroundBrush}"
+                      Padding="20,8"/>
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Grid>
     </Grid>
   </Border>
 </Window>
