@@ -6,7 +6,7 @@ namespace AMacQConfigEditor.Licensing;
 
 internal static class LicenseValidator
 {
-    public const string PublicKeyXml = "<RSAKeyValue><Modulus>wxYZBOWyANnczaU8BqLDR0lv6IZM7KKF8UZaVtieEu4jt3T2pohGT9O34xr4p9WGcvqjVNAnObbZHyqlJqX9L4CgeOrSgFYkM2C81oUchlNyi+O5zNdpH/uqyt20N9T7TNxaTeYr1sHz0oUllYDtgK6Pb+J5BAxr/KjN0/iEENllpwW3EVR3a9eVVIERrV0uC20kxmkBoGAYBIRsXG/+5XCVGF6tmKfVJDq25LSICZKp56B9RAK9GTT1Krn7hRgfMKXFOcmibYh8zrkqwTO0Tn2peINXnzaPXem4iBz7QQAD2wvfPEElOAo6oNNgAU3kcfgeNaes7JPW9O4+duwbFQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+    public const string PublicKeyXml = "<RSAKeyValue><Modulus>0i2+PzExJWQLTHDzTlCpaA0BjEGcq3UcVdzEQdjs16OYAixE6NKnanlIzwm3msRqb/HQDUOSBXe+tx3K5DXgTqykFGw4xwWMzCmhyDPiVByg0rBQwAa+MhY9sxFyRjFfGezB/hyQvPTczOBdLmcGqa998N6tdAVTWJQB5xV1o9/Ou32yCmqID8+QozdMY6SYS0i5h8YhbWTaMupg2eHl8tE5S2v1dYeY9Lw8oabTBHBKoVHccjWgmC2XiiuIMlv5LMlvqeNz9pSjmo+UTXZK6drCh7iPF4PfQvsERNQERuMsaBe43HfF90sc4IDlnXXJ+f5P2zHb6sTvUt41dUINm+CHMUQ7x7X/ntYWT47IX0oCE3QtTxMHH0LJ8HBq1yZU/CCEZn/+/ow6MGJmZHqENmrqCgX9RiQNTRx6nJTX0tTVyydsVVhMKPsALF/8X2X76fRqiveNqTI4VoK1fmCp0LWpaiTsf+8HY23dyvfWiNYdlQg+OfA4iIoqUo22aACMYG8l/ngpZjsHxt9KTYYCLpA4eMHX4WWE/+WV2BN9+da8F0qg7Lf2dvEd53lzyk+UkT++81Xj9pvCvyzHpZOUX6jheQbch9DUUjYCI0G80gFfADU/5P7DFPPuXbx5CJlFu2DWw3TH/Eo8JmYZhFK3u/KiEZJYa9g9HdKloYfFtpE=</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
 
     public static LicenseValidationResult Validate(string licenseJson, string machineCode, DateTime utcNow, string publicKeyXml)
     {

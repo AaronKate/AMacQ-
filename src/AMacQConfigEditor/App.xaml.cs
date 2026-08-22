@@ -18,7 +18,7 @@ public partial class App : Application
         new MainWindow().Show();
         return;
 #else
-        RemoveExpiredRuntimeConfiguration();
+        RemoveInvalidLicenseAndExpiredRuntimeConfiguration();
         if (IsLicenseValid())
         {
             new MainWindow().Show();
@@ -69,13 +69,22 @@ public partial class App : Application
         return LicenseValidator.Validate(license!, MachineCodeService.CurrentMachineCode, System.DateTime.UtcNow, LicenseValidator.PublicKeyXml).IsValid;
     }
 
-    private static void RemoveExpiredRuntimeConfiguration()
+    private static void RemoveInvalidLicenseAndExpiredRuntimeConfiguration()
     {
         var licenseJson = LicenseStore.Load();
-        if (!string.IsNullOrWhiteSpace(licenseJson)
-            && LicenseValidator.IsSignedLicenseExpired(licenseJson!, MachineCodeService.CurrentMachineCode, System.DateTime.UtcNow, LicenseValidator.PublicKeyXml))
+        if (string.IsNullOrWhiteSpace(licenseJson)) return;
+
+        var machineCode = MachineCodeService.CurrentMachineCode;
+        var utcNow = System.DateTime.UtcNow;
+        var validation = LicenseValidator.Validate(licenseJson!, machineCode, utcNow, LicenseValidator.PublicKeyXml);
+        if (!validation.IsValid)
         {
-            ExpiredLicenseCleanupService.DisableRuntimeConfigurationFiles();
+            if (LicenseValidator.IsSignedLicenseExpired(licenseJson!, machineCode, utcNow, LicenseValidator.PublicKeyXml))
+            {
+                ExpiredLicenseCleanupService.DisableRuntimeConfigurationFiles();
+            }
+
+            LicenseStore.Delete();
         }
     }
 }

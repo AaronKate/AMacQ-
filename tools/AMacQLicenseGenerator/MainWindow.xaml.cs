@@ -15,8 +15,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         SetPrivateKeyPath(FindPrivateKeyPath());
-        ExpiryDateBox.Text = DateTime.Today.AddYears(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        ExpiryCalendar.SelectedDate = DateTime.Today.AddYears(1);
+        ExpiryDateBox.Text = DateTime.Today.AddDays(2).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        ExpiryCalendar.SelectedDate = DateTime.Today.AddDays(2);
         ApplyRandomTheme();
         SetLicenseMode(false);
         Loaded += (_, _) => UpdateWindowClip();

@@ -15,4 +15,9 @@ internal static class LicenseStore
         Directory.CreateDirectory(DirectoryPath);
         File.Copy(sourcePath, LicensePath, true);
     }
+
+    public static void Delete()
+    {
+        if (File.Exists(LicensePath)) File.Delete(LicensePath);
+    }
 }
