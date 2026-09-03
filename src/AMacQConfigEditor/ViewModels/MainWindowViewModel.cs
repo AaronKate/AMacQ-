@@ -76,17 +76,61 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string GetBindingSummary(string weapon) =>
         _session is null ? string.Empty : LuaConfigService.GetBindingSummary(_session.KeyBindings.Content, weapon);
 
+    public string GetBindingValue(string weapon, string suffix) =>
+        _session is null ? "0" : LuaConfigService.GetNumber(_session.KeyBindings.Content, $"{weapon}_{suffix}") ?? "0";
+
+    public void RefreshSelectedWeaponValues()
+    {
+        LoadSelectedWeaponValues();
+    }
+
+    public SensitivityAdjustmentResult AdjustCurrentWeaponSensitivity(bool adjustX, int direction)
+    {
+        if (_session is null || string.IsNullOrWhiteSpace(SelectedWeapon))
+            return SensitivityAdjustmentResult.Failure("尚未加载配置或选择枪械。");
+
+        var weapon = SelectedWeapon!;
+        var axis = adjustX ? "X" : "Y";
+        var baseSuffix = $"qq1156777787_{axis}";
+        var baseName = $"{weapon}_{baseSuffix}";
+        var baseValue = LuaConfigService.GetNumber(_session.Sensitivity.Content, baseName);
+        if (baseValue is null)
+            return SensitivityAdjustmentResult.Failure($"当前枪械缺少 {axis} 轴灵敏度配置，未进行修改。");
+
+        var delta = direction > 0 ? 0.05m : -0.05m;
+        var newBaseValue = AdjustSensitivityBy(baseValue, delta);
+        var updatedContent = LuaConfigService.SetNumber(_session.Sensitivity.Content, baseName, newBaseValue);
+        AtomicFileWriter.WriteAllText(_session.Sensitivity.Path, updatedContent, _session.Sensitivity.Encoding);
+        _session.Sensitivity.Content = updatedContent;
+
+        if (adjustX)
+        {
+            SensitivityX = newBaseValue;
+            OnPropertyChanged(nameof(SensitivityX));
+        }
+        else
+        {
+            SensitivityY = newBaseValue;
+            OnPropertyChanged(nameof(SensitivityY));
+        }
+
+        StatusMessage = $"{weapon} 的 {axis} 轴已调整。";
+        return SensitivityAdjustmentResult.Success(weapon, axis, newBaseValue);
+    }
+
     public void Save()
     {
         if (_session is null || string.IsNullOrWhiteSpace(SelectedWeapon)) return;
         ValidateKey(PrimaryKey); ValidateKey(AltKey); ValidateKey(CtrlKey);
         ValidateDecimal(SensitivityX); ValidateDecimal(SensitivityY); ValidateDecimal(SensitivityAddX); ValidateDecimal(SensitivityAddY);
         _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_qq1156777787", PrimaryKey);
+        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBinding(_session.KeyBindings.Content, SelectedWeapon!, "qq1156777787", PrimaryKey);
         _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, "press", Press);
         _session.KeyBindings.Content = LuaConfigService.SetString(_session.KeyBindings.Content, "modeswitch", ModeSwitch);
         _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_qq1156777787_second", AltKey);
+        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBinding(_session.KeyBindings.Content, SelectedWeapon!, "qq1156777787_second", AltKey);
         _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_Third", CtrlKey);
-        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBindings(_session.KeyBindings.Content, SelectedWeapon!, new Dictionary<string, string> { ["qq1156777787"] = PrimaryKey, ["qq1156777787_second"] = AltKey, ["Third"] = CtrlKey });
+        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBinding(_session.KeyBindings.Content, SelectedWeapon!, "Third", CtrlKey);
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_X", SensitivityX);
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_Y", SensitivityY);
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_add_X", SensitivityAddX);
@@ -115,8 +159,21 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         return number.ToString("0.##", CultureInfo.InvariantCulture);
     }
     private static void ValidateDecimal(string value) { if (!IsValidSensitivityValue(value)) throw new InvalidOperationException("灵敏度必须是非负整数或最多两位小数。"); }
+    private static string AdjustSensitivityBy(string value, decimal delta)
+    {
+        if (!decimal.TryParse(value, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number))
+            throw new InvalidOperationException("灵敏度配置格式无效。");
+        number = Math.Max(0m, Math.Round(number + delta, 2));
+        return number.ToString("0.##", CultureInfo.InvariantCulture);
+    }
     private bool Set<T>(ref T field, T value, [CallerMemberName] string? name = null) { if (EqualityComparer<T>.Default.Equals(field, value)) return false; field = value; OnPropertyChanged(name); return true; }
     private void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+public sealed record SensitivityAdjustmentResult(bool IsSuccess, string? Error, string? Weapon, string? Axis, string? BaseValue)
+{
+    public static SensitivityAdjustmentResult Success(string weapon, string axis, string baseValue) => new(true, null, weapon, axis, baseValue);
+    public static SensitivityAdjustmentResult Failure(string error) => new(false, error, null, null, null);
 }
 
 public sealed record LoadResult(bool IsSuccess, string? Error)

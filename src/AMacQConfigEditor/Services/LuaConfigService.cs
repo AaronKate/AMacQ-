@@ -17,22 +17,21 @@ public static class LuaConfigService
     public static string SetString(string content, string variableName, string value) =>
         SetValue(content, variableName, value, quoted: true);
 
-    public static string ClearConflictingBindings(string content, string selectedWeapon, IReadOnlyDictionary<string, string> suffixValues)
+    public static string ClearConflictingBinding(string content, string selectedWeapon, string suffix, string selectedValue)
     {
+        if (selectedValue == "0") return content;
+
         foreach (var assignment in GetAssignments(content))
         {
             var separator = assignment.Name.IndexOf('_');
-            if (separator <= 0 || assignment.Value == "0")
-            {
-                continue;
-            }
+            if (separator <= 0) continue;
 
             var weapon = assignment.Name.Substring(0, separator);
-            var suffix = assignment.Name.Substring(separator + 1);
+            var assignmentSuffix = assignment.Name.Substring(separator + 1);
+            var assignmentValue = GetNumber(content, assignment.Name);
             if (!string.Equals(weapon, selectedWeapon, StringComparison.Ordinal) &&
-                suffixValues.TryGetValue(suffix, out var selectedValue) &&
-                selectedValue != "0" &&
-                assignment.Value == selectedValue)
+                assignmentSuffix == suffix &&
+                assignmentValue == selectedValue)
             {
                 content = SetNumber(content, assignment.Name, "0");
             }
