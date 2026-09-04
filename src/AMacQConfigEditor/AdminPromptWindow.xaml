@@ -1,0 +1,69 @@
+<Window x:Class="AMacQConfigEditor.AdminPromptWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="建议使用管理员模式" Width="520" Height="270"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize" WindowStyle="None"
+        AllowsTransparency="True" Background="Transparent" Foreground="#F7F2FF"
+        FontFamily="Segoe UI" ShowInTaskbar="True">
+  <Window.Resources>
+    <LinearGradientBrush x:Key="WindowBackground" StartPoint="0,0" EndPoint="1,1">
+      <GradientStop Color="#172D4A" Offset="0"/><GradientStop Color="#091421" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="TitleBackground" StartPoint="0,0" EndPoint="1,0">
+      <GradientStop Color="#1F4268" Offset="0"/><GradientStop Color="#10233B" Offset="1"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="AccentBackground" StartPoint="0,0" EndPoint="1,0">
+      <GradientStop Color="#22D3EE" Offset="0"/><GradientStop Color="#6366F1" Offset="1"/>
+    </LinearGradientBrush>
+    <Style x:Key="ButtonBase" TargetType="Button">
+      <Setter Property="Foreground" Value="#F7F2FF"/><Setter Property="Background" Value="#132440"/>
+      <Setter Property="BorderBrush" Value="#6488C4"/><Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="18,9"/><Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="#5DD7FF"/></Trigger>
+          <Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.75"/></Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ButtonBase}">
+      <Setter Property="Foreground" Value="White"/><Setter Property="Background" Value="{StaticResource AccentBackground}"/><Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style x:Key="CloseButton" TargetType="Button">
+      <Setter Property="Foreground" Value="#F7F2FF"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+        <Border x:Name="Surface" Background="{TemplateBinding Background}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border>
+        <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="#1E5274"/></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></Setter.Value></Setter>
+    </Style>
+  </Window.Resources>
+  <Border x:Name="WindowShell" Background="{StaticResource WindowBackground}" BorderBrush="#6488C4" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="40"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+      <Border Background="{StaticResource TitleBackground}" BorderBrush="#31506E" BorderThickness="0,0,0,1" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+        <Grid>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+            <TextBlock Text="!" Width="22" Height="22" TextAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" FontSize="15" Foreground="White" Background="{StaticResource AccentBackground}"/>
+            <TextBlock Text="AMacQ · 启动提示" Margin="9,0,0,0" VerticalAlignment="Center" FontSize="13" FontWeight="SemiBold"/>
+          </StackPanel>
+          <Button Name="CloseButton" Content="×" Width="42" Height="40" HorizontalAlignment="Right" FontSize="22" Style="{StaticResource CloseButton}"/>
+        </Grid>
+      </Border>
+      <Grid Grid.Row="1" Margin="32,24,32,22">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <TextBlock Text="建议使用管理员模式" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource AccentBackground}"/>
+        <TextBlock Grid.Row="1" Text="以管理员权限运行可以确保部署和配置操作正常完成。" FontSize="12" Foreground="#B9CAE0" Margin="0,7,0,0"/>
+        <TextBlock Grid.Row="2" Text="请以管理员权限重新启动程序后再继续使用。" FontSize="14" Foreground="#F7F2FF" VerticalAlignment="Center"/>
+        <TextBlock Name="StatusText" Grid.Row="3" TextWrapping="Wrap" FontSize="11" Foreground="#FB7185" Margin="0,0,0,12" Visibility="Collapsed"/>
+        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button Name="ContinueButton" Content="关闭程序" Style="{StaticResource ButtonBase}" Margin="0,0,10,0" IsCancel="True"/>
+          <Button Name="RestartButton" Content="以管理员身份重启" Style="{StaticResource PrimaryButton}" IsDefault="True"/>
+        </StackPanel>
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

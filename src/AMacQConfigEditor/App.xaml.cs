@@ -11,24 +11,37 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs eventArgs)
     {
         base.OnStartup(eventArgs);
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-        if (!IsRunningAsAdministrator() && PromptForAdministratorRestart()) return;
+        if (!IsRunningAsAdministrator())
+        {
+            if (PromptForAdministratorRestart()) return;
+            Shutdown();
+            return;
+        }
 
 #if AUTHOR_EDITION
-        new MainWindow().Show();
+        ShowMainWindow();
         return;
 #else
         RemoveInvalidLicenseAndExpiredRuntimeConfiguration();
         if (IsLicenseValid())
         {
-            new MainWindow().Show();
+            ShowMainWindow();
             return;
         }
 
         var licenseWindow = new LicenseWindow();
-        if (licenseWindow.ShowDialog() == true) new MainWindow().Show();
+        if (licenseWindow.ShowDialog() == true) ShowMainWindow();
         else Shutdown();
 #endif
+    }
+
+    private static void ShowMainWindow()
+    {
+        Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+        Current.MainWindow = new MainWindow();
+        Current.MainWindow.Show();
     }
 
     private static bool IsRunningAsAdministrator()
@@ -39,12 +52,8 @@ public partial class App : Application
 
     private bool PromptForAdministratorRestart()
     {
-        var result = MessageBox.Show(
-            "建议以管理员模式启动，以确保部署和配置操作能够正常完成。\n\n是否现在以管理员权限重新启动？",
-            "建议使用管理员模式",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Information);
-        if (result != MessageBoxResult.Yes) return false;
+        var prompt = new AdminPromptWindow();
+        if (prompt.ShowDialog() != true) return false;
 
         try
         {
@@ -57,7 +66,9 @@ public partial class App : Application
         }
         catch
         {
-            MessageBox.Show("未能以管理员权限重新启动，程序将以当前权限继续运行。", "启动失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            var failurePrompt = new AdminPromptWindow();
+            failurePrompt.ShowRestartFailure();
+            failurePrompt.ShowDialog();
             return false;
         }
     }
