@@ -12,7 +12,7 @@ namespace AMacQConfigEditor.Services;
 internal static class ObscuredPackageDeploymentService
 {
     private const string ResourceName = "AMacQConfigEditor.Resources.SorinPackage.zip";
-    private const string LauncherName = "GHUB - Sorin 24.1 S10-1.lua";
+    private const string LauncherName = "GHUB - Sorin 25.1 S11-1.lua";
     private static readonly string[] ConfigurationFileNames = { "sorinkg.lua", "sorinxs.lua" };
     private const string DisabledConfigurationSuffix = ".disabled";
 
@@ -122,6 +122,7 @@ internal static class ObscuredPackageDeploymentService
         var directoryName = normalizedDirectory.Substring(normalizedDirectory.LastIndexOf('/') + 1);
         var encodedParentDirectory = string.Join(",", parentDirectory.Select(character => ((int)character ^ key).ToString()));
         var encodedDirectoryName = string.Join(",", directoryName.Select(character => ((int)character ^ key).ToString()));
+        var encodedModuleName = string.Join(",", "/ms.lua".Select(character => ((int)character ^ key).ToString()));
         return $@"local function b(a,c)local d={{[0]=0,[1]=1}};local e=1;local f=0;while a>0 or c>0 do local g=d[a%2]~=d[c%2] and 1 or 0;f=f+g*e;a=math.floor(a/2);c=math.floor(c/2);e=e*2 end;return f end
 local function p(t,k)local r={{}}for i=1,#t do r[i]=string.char(b(t[i],k))end return table.concat(r)end
 SorinQQ=ZuoZHEQQ1156777787
@@ -129,7 +130,8 @@ NSB=(load and loadstring or load)
 QQ=""qq1156777787""
 path=p({{{encodedParentDirectory}}},{key})
 SorinName=p({{{encodedDirectoryName}}},{key})
-dofile(path..SorinName..""/ms.lua"")
+ModuleName=p({{{encodedModuleName}}},{key})
+dofile(path..SorinName..ModuleName)
 ";
     }
 }

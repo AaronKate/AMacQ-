@@ -16,7 +16,7 @@
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Windows.Forms" />
     <EmbeddedResource Include="..\..\assets\AMacQ.ico" LogicalName="AMacQConfigEditor.Resources.AMacQ.ico" />
-    <EmbeddedResource Include="Resources\Sorin 24.1 S10.zip" LogicalName="AMacQConfigEditor.Resources.SorinPackage.zip" />
+    <EmbeddedResource Include="Resources\Sorin 25.1 S11-N3-1.zip" LogicalName="AMacQConfigEditor.Resources.SorinPackage.zip" />
     <Resource Include="Resources\Guide\01-open-profile-menu.png" />
     <Resource Include="Resources\Guide\02-select-desktop-profile.png" />
     <Resource Include="Resources\Guide\03-create-lua-script.png" />
