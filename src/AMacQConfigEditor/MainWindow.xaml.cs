@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Drawing.Drawing2D;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Controls;
@@ -39,13 +39,14 @@ public partial class MainWindow : Window
     private const int HotKeyXIncrease = 2;
     private const int HotKeyYDecrease = 3;
     private const int HotKeyYIncrease = 4;
-    private const int HotKeyStep = 5;
     private const int HotKeyWeaponMenu = 6;
     private const int TrayMenuCornerRadius = 10;
     private readonly Forms.ContextMenuStrip _trayMenu = new();
     private readonly HashSet<Forms.ToolStripDropDown> _roundedTrayMenus = [];
+    private readonly HashSet<Forms.ToolStripDropDown> _configuredTrayMenus = [];
     private Forms.ToolStripMenuItem? _trayCurrentWeaponStatus;
     private Forms.ToolStripMenuItem? _trayWeaponMenu;
+    private bool _trayMenuDirty = true;
     private HwndSource? _windowSource;
     private IntPtr _windowHandle;
     private readonly HashSet<int> _registeredHotKeys = [];
@@ -95,9 +96,13 @@ public partial class MainWindow : Window
         SaveBtn.Click += (_, _) => SaveChanges();
         MinimizeBtn.Click += (_, _) => HideToTray();
         CloseBtn.Click += (_, _) => Close();
-        Closing += (_, _) => ObscuredPackageDeploymentService.DisableRuntimeConfigurationFiles();
+        Closing += (_, _) =>
+        {
+            _viewModel.FlushPendingSensitivityWrite();
+            ObscuredPackageDeploymentService.DisableRuntimeConfigurationFiles();
+        };
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) HideToTray(); };
-        WeaponList.SelectionChanged += (_, _) => SelectWeapon();
+        WeaponList.SelectionChanged += (_, _) => OnWeaponSelectionChanged();
         WeaponList.PreviewTextInput += (_, args) => FindWeaponByPrefix(args);
         WeaponList.ItemContainerStyle = (Style)FindResource("WeaponListItem");
 
@@ -126,7 +131,8 @@ public partial class MainWindow : Window
         ApplyTrayMenuCornerRadius(_trayMenu);
         _trayMenu.ShowImageMargin = false;
         _trayMenu.ShowCheckMargin = true;
-        _trayMenu.Font = new Drawing.Font("Segoe UI", 9F);
+        _trayMenu.Font = new Drawing.Font("Segoe UI", 11F);
+        _trayMenu.ItemAdded += (_, args) => StyleTrayMenuItem(args.Item);
         _trayMenu.Items.Add("打开主窗口", null, (_, _) => RestoreFromTray());
         _trayCurrentWeaponStatus = new Forms.ToolStripMenuItem { Enabled = false };
         _trayMenu.Items.Add(_trayCurrentWeaponStatus);
@@ -137,8 +143,8 @@ public partial class MainWindow : Window
         _trayMenu.Items.Add("退出", null, (_, _) => Close());
         _trayIcon.ContextMenuStrip = _trayMenu;
         _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
+        _trayMenu.Opening += (_, _) => RefreshTrayWeaponMenuIfNeeded();
         _trayIcon.Visible = true;
-        RefreshTrayWeaponMenu();
     }
 
     private void InitializeGlobalHotKeys()
@@ -152,7 +158,6 @@ public partial class MainWindow : Window
         RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "Ctrl + Alt + 下方向键");
         RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "Ctrl + Alt + 上方向键");
         RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "Ctrl + Alt + M");
-        RefreshTrayWeaponMenu();
     }
 
     private void RegisterGlobalHotKey(int id, uint virtualKey, string shortcut)
@@ -196,7 +201,7 @@ public partial class MainWindow : Window
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            RefreshTrayWeaponMenu();
+            RefreshTrayWeaponMenuIfNeeded();
             if (_trayMenu.Visible)
             {
                 _trayMenu.Close();
@@ -216,7 +221,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        RefreshTrayWeaponMenu();
+        // 托盘菜单不展示灵敏度数值，无需在每次微调后重建整棵菜单。
         QueueHotKeyNotification($"{result.Weapon} 的基础 {result.Axis} 已调整为 {result.BaseValue}，增幅值保持不变。", Forms.ToolTipIcon.Info);
     }
 
@@ -290,8 +295,6 @@ public partial class MainWindow : Window
             LoadDefaultFilesIfAvailable();
             OpenLauncherInExplorer();
             var ghubLaunchResult = LogitechGHubLauncher.TryLaunchInstalledGHub();
-            if (!ghubLaunchResult.IsLaunched)
-                LogitechGHubLauncher.OpenDownloadPage();
             DeploymentStatusText.Text = result.ExtractedTargets.Count > 0
                 ? "部署完成，已就绪"
                 : "已检查，资源已存在";
@@ -360,10 +363,22 @@ public partial class MainWindow : Window
         });
     }
 
+    private static void StyleTrayMenuItem(Forms.ToolStripItem item)
+    {
+        if (item is Forms.ToolStripMenuItem menuItem)
+        {
+            menuItem.Padding = new Forms.Padding(10, 5, 10, 5);
+        }
+    }
+
     private void ConfigureTrayDropDown(Forms.ToolStripDropDown dropDown)
     {
+        // 同一实例只配置一次，避免每次重建都对常驻下拉菜单重复订阅 ItemAdded 等事件。
+        if (!_configuredTrayMenus.Add(dropDown)) return;
+
         dropDown.Renderer = new TrayMenuRenderer(this);
-        dropDown.Font = new Drawing.Font("Segoe UI", 9F);
+        dropDown.Font = new Drawing.Font("Segoe UI", 11F);
+        dropDown.ItemAdded += (_, args) => StyleTrayMenuItem(args.Item);
         if (dropDown is Forms.ToolStripDropDownMenu menu)
         {
             menu.ShowImageMargin = false;
@@ -379,7 +394,11 @@ public partial class MainWindow : Window
 
         dropDown.SizeChanged += (_, _) => UpdateTrayMenuRegion(dropDown);
         dropDown.Opened += (_, _) => UpdateTrayMenuRegion(dropDown);
-        dropDown.Disposed += (_, _) => _roundedTrayMenus.Remove(dropDown);
+        dropDown.Disposed += (_, _) =>
+        {
+            _roundedTrayMenus.Remove(dropDown);
+            _configuredTrayMenus.Remove(dropDown);
+        };
     }
 
     private static void UpdateTrayMenuRegion(Forms.ToolStripDropDown dropDown)
@@ -401,18 +420,28 @@ public partial class MainWindow : Window
         return path;
     }
 
+    private void RefreshTrayWeaponMenuIfNeeded()
+    {
+        UpdateTrayCurrentWeaponStatus();
+        if (!_trayMenuDirty) return;
+
+        _trayMenuDirty = false;
+        RefreshTrayWeaponMenu();
+    }
+
+    private void MarkTrayWeaponMenuDirty() => _trayMenuDirty = true;
+
     private void RefreshTrayWeaponMenu()
     {
         if (_trayWeaponMenu is null) return;
 
-        if (_trayCurrentWeaponStatus is not null)
-        {
-            var weapon = string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon) ? "未选择" : GetWeaponDisplayName(_viewModel.SelectedWeapon);
-            _trayCurrentWeaponStatus.Text = $"当前枪械：{weapon}";
-        }
+        UpdateTrayCurrentWeaponStatus();
 
+        // 重建前先递归释放整棵旧菜单树：若只 Clear 而不 Dispose，被换掉的菜单项及其
+        // 子 DropDown、字体、渲染器会因 _roundedTrayMenus 等集合的强引用而无法回收，
+        // 每切换一次枪械或调整一次灵敏度都会遗留一批，导致内存持续增长。
+        DisposeMenuItems(_trayWeaponMenu.DropDownItems);
         _trayWeaponMenu.DropDownItems.Clear();
-        ConfigureTrayDropDown(_trayWeaponMenu.DropDown);
         if (_viewModel.Weapons.Count == 0)
         {
             _trayWeaponMenu.DropDownItems.Add(new Forms.ToolStripMenuItem("尚未加载配置") { Enabled = false });
@@ -452,12 +481,32 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateTrayCurrentWeaponStatus()
+    {
+        if (_trayCurrentWeaponStatus is null) return;
+        var weapon = string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon) ? "未选择" : GetWeaponDisplayName(_viewModel.SelectedWeapon);
+        _trayCurrentWeaponStatus.Text = $"当前枪械：{weapon}";
+    }
+
+    private static void DisposeMenuItems(Forms.ToolStripItemCollection items)
+    {
+        // ToolStripItem.Dispose 会将其从父集合移除，因此从末尾向前逐个释放即可遍历完整棵树。
+        for (var index = items.Count - 1; index >= 0; index--)
+        {
+            if (items[index] is Forms.ToolStripDropDownItem { DropDownItems.Count: > 0 } dropDownItem)
+            {
+                DisposeMenuItems(dropDownItem.DropDownItems);
+            }
+            items[index].Dispose();
+        }
+    }
+
     private static string GetWeaponCategory(string weapon) => weapon switch
     {
-        "AK12" or "AKM" or "AR57" or "ASVAL" or "ASH" or "AUG" or "M7" or "CAR15" or "G3" or "K416" or "K437" or "KC17" or "M4A1" or "MCX" or "MDR" or "MK47" or "QBZ" or "RM277" or "SCAR" or "SG552" or "TJ191" => "突击步枪",
+        "AK12" or "AKM" or "AR57" or "ASVAL" or "ASH" or "AUG" or "M7" or "CAR15" or "G3" or "K416" or "K437" or "KC17" or "M4A1" or "MCX" or "MDR" or "MK47" or "PTR32" or "QBZ" or "RM277" or "SCAR" or "SG552" or "TJ191" => "突击步枪",
         "MK4" or "MP5" or "MP7" or "QCQ17" or "SR3M" or "TOM" or "UZI" or "Vector" or "YeNiu" => "冲锋枪",
         "M250" or "PKM" or "QJB201" => "轻机枪",
-        "M14" or "PTR32" or "SVCH" => "射手步枪",
+        "M14" or "SVCH" => "射手步枪",
         _ => "其他"
     };
 
@@ -497,6 +546,8 @@ public partial class MainWindow : Window
 
         if (ReferenceEquals(WeaponList.SelectedItem, item)) SelectWeapon();
         else WeaponList.SelectedItem = item;
+
+        MarkTrayWeaponMenuDirty();
     }
 
     private void ApplyTrayBinding(string weapon, string propertyName, string value)
@@ -526,7 +577,7 @@ public partial class MainWindow : Window
         _keyBindingsPath = ObscuredPackageDeploymentService.GetInstalledConfigurationPath("sorinkg.lua");
         _sensitivityPath = ObscuredPackageDeploymentService.GetInstalledConfigurationPath("sorinxs.lua");
         if (_keyBindingsPath is not null && _sensitivityPath is not null) LoadFiles();
-        else RefreshTrayWeaponMenu();
+        else MarkTrayWeaponMenuDirty();
     }
 
     private void LoadFiles()
@@ -539,7 +590,7 @@ public partial class MainWindow : Window
         }
 
         RefreshWeaponList();
-        RefreshTrayWeaponMenu();
+        MarkTrayWeaponMenuDirty();
     }
 
     private void RefreshWeaponList(string? selectedWeapon = null)
@@ -558,7 +609,19 @@ public partial class MainWindow : Window
         RefreshKeyOptions();
         SelectedLabel.Text = "当前枪械：";
         SelectedWeaponLabel.Text = weapon.DisplayName;
-        RefreshTrayWeaponMenu();
+        UpdateTrayCurrentWeaponStatus();
+    }
+
+    private void OnWeaponSelectionChanged()
+    {
+        // 主窗口选中项变化本身不触发托盘菜单重建：
+        // 托盘菜单在用户打开时按需刷新（ShowWeaponMenuFromHotKey / 左键打开托盘），
+        // 避免一次保存流程触发多次重建。
+        if (WeaponList.SelectedItem is WeaponListItem)
+        {
+            SelectWeapon();
+            MarkTrayWeaponMenuDirty();
+        }
     }
 
     private void FindWeaponByPrefix(TextCompositionEventArgs args)
@@ -652,7 +715,7 @@ public partial class MainWindow : Window
         MouseModelList.SelectionChanged += (_, _) =>
         {
             RefreshKeyOptions();
-            RefreshTrayWeaponMenu();
+            MarkTrayWeaponMenuDirty();
         };
         MouseModelList.SelectedIndex = 0;
     }
@@ -664,7 +727,7 @@ public partial class MainWindow : Window
             _viewModel.Save();
             SaveBtn.Content = "应用成功";
             RefreshWeaponList(_viewModel.SelectedWeapon);
-            RefreshTrayWeaponMenu();
+            MarkTrayWeaponMenuDirty();
             _saveResetTimer.Stop();
             _saveResetTimer.Start();
         }
@@ -770,13 +833,7 @@ public partial class MainWindow : Window
 
         protected override void OnRenderToolStripBorder(Forms.ToolStripRenderEventArgs eventArgs)
         {
-            var bounds = eventArgs.AffectedBounds;
-            bounds.Width -= 1;
-            bounds.Height -= 1;
-            using var path = CreateRoundedRectanglePath(bounds, TrayMenuCornerRadius);
-            using var pen = new Drawing.Pen(_window.GetThemeColor("BorderPanelColor"));
-            eventArgs.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            eventArgs.Graphics.DrawPath(pen, path);
+            // 菜单使用圆角裁剪区域，不绘制额外边框线，避免出现明显的矩形边框。
         }
 
         protected override void OnRenderMenuItemBackground(Forms.ToolStripItemRenderEventArgs eventArgs)
@@ -854,3 +911,5 @@ public partial class MainWindow : Window
         return Drawing.Color.FromArgb(255, 15, 32, 56);
     }
 }
+
+

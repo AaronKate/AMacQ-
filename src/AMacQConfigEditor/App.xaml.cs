@@ -13,6 +13,8 @@ public partial class App : Application
         base.OnStartup(eventArgs);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
+        ObscuredPackageDeploymentService.CleanupPreviousDeployment();
+
         if (!IsRunningAsAdministrator())
         {
             if (PromptForAdministratorRestart()) return;

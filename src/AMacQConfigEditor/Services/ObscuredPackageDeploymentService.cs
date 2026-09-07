@@ -16,7 +16,8 @@ internal static class ObscuredPackageDeploymentService
     private static readonly string[] ConfigurationFileNames = { "sorinkg.lua", "sorinxs.lua" };
     private const string DisabledConfigurationSuffix = ".disabled";
 
-    public static string LauncherPath => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory)!, LauncherName);
+    public static string LauncherPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), LauncherName);
+    private static string LegacyLauncherPath => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory)!, LauncherName);
 
     public static PackageDeploymentResult Deploy(Action<PackageDeploymentProgress>? progress = null)
     {
@@ -50,6 +51,26 @@ internal static class ObscuredPackageDeploymentService
     }
 
     public static string? GetInstallDirectory() => TryGetInstallDirectory();
+    /// <summary>
+    /// 清理上一次部署生成在 C 盘根目录的启动脚本。
+    /// </summary>
+    public static void CleanupPreviousDeployment()
+    {
+        try
+        {
+            if (File.Exists(LauncherPath)) File.Delete(LauncherPath);
+            // 清理旧版本曾生成在 C 盘根目录的同名文件。
+            if (File.Exists(LegacyLauncherPath)) File.Delete(LegacyLauncherPath);
+        }
+        catch (IOException)
+        {
+            // 文件正在被游戏或 G HUB 使用时，不影响程序启动。
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // 权限不足时不影响程序启动。
+        }
+    }
 
     public static void RestoreRuntimeConfigurationFiles()
     {
@@ -135,3 +156,5 @@ dofile(path..SorinName..ModuleName)
 ";
     }
 }
+
+

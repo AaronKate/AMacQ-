@@ -12,6 +12,9 @@ public static class AtomicFileWriter
         if (content is null) throw new ArgumentNullException(nameof(content));
         if (encoding is null) throw new ArgumentNullException(nameof(encoding));
 
+        // 避免没有实际变化时重复创建临时文件、替换文件和触发磁盘扫描。
+        if (File.Exists(path) && string.Equals(File.ReadAllText(path, encoding), content, StringComparison.Ordinal)) return;
+
         var directory = Path.GetDirectoryName(Path.GetFullPath(path))!;
         var temporaryPath = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
         try
@@ -35,3 +38,4 @@ public static class AtomicFileWriter
         }
     }
 }
+

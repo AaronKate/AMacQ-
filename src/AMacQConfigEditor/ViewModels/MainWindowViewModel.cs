@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Globalization;
 using AMacQConfigEditor.Models;
 using AMacQConfigEditor.Services;
@@ -16,6 +18,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private ConfigurationSession? _session;
     private string? _selectedWeapon;
     private string _statusMessage = "请选择两个 Lua 配置文件。";
+    private readonly object _sensitivityWriteLock = new();
+    private CancellationTokenSource? _sensitivityWriteCancellation;
+    private const int SensitivityWriteDelayMilliseconds = 300;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -48,6 +53,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
 
     public LoadResult Load(string keyBindingsPath, string sensitivityPath)
     {
+        FlushPendingSensitivityWrite();
         if (string.Equals(keyBindingsPath, sensitivityPath, StringComparison.OrdinalIgnoreCase))
         {
             return LoadResult.Failure("请为两个配置角色选择不同的文件。");
@@ -100,8 +106,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var delta = direction > 0 ? 0.01m : -0.01m;
         var newBaseValue = AdjustSensitivityBy(baseValue, delta);
         var updatedContent = LuaConfigService.SetNumber(_session.Sensitivity.Content, baseName, newBaseValue);
-        AtomicFileWriter.WriteAllText(_session.Sensitivity.Path, updatedContent, _session.Sensitivity.Encoding);
         _session.Sensitivity.Content = updatedContent;
+        ScheduleSensitivityWrite();
 
         if (adjustX)
         {
@@ -118,6 +124,54 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         return SensitivityAdjustmentResult.Success(weapon, axis, newBaseValue);
     }
 
+    private void ScheduleSensitivityWrite()
+    {
+        CancellationToken token;
+        lock (_sensitivityWriteLock)
+        {
+            _sensitivityWriteCancellation?.Cancel();
+            _sensitivityWriteCancellation = new CancellationTokenSource();
+            token = _sensitivityWriteCancellation.Token;
+        }
+
+        _ = WriteSensitivityAfterDelayAsync(token);
+    }
+
+    private async Task WriteSensitivityAfterDelayAsync(CancellationToken token)
+    {
+        try
+        {
+            await Task.Delay(SensitivityWriteDelayMilliseconds, token).ConfigureAwait(false);
+            lock (_sensitivityWriteLock)
+            {
+                if (token.IsCancellationRequested || _session is null) return;
+                AtomicFileWriter.WriteAllText(_session.Sensitivity.Path, _session.Sensitivity.Content, _session.Sensitivity.Encoding);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户继续调整时取消本次延迟写入。
+        }
+        catch (IOException)
+        {
+            // 保留内存中的最新值，后续调整或退出时会再次尝试写入。
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // 保留内存中的最新值，后续调整或退出时会再次尝试写入。
+        }
+    }
+
+    public void FlushPendingSensitivityWrite()
+    {
+        lock (_sensitivityWriteLock)
+        {
+            _sensitivityWriteCancellation?.Cancel();
+            _sensitivityWriteCancellation = null;
+            if (_session is null) return;
+            AtomicFileWriter.WriteAllText(_session.Sensitivity.Path, _session.Sensitivity.Content, _session.Sensitivity.Encoding);
+        }
+    }
     public void Save()
     {
         if (_session is null || string.IsNullOrWhiteSpace(SelectedWeapon)) return;
@@ -136,7 +190,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_add_X", SensitivityAddX);
         _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_add_Y", SensitivityAddY);
         AtomicFileWriter.WriteAllText(_session.KeyBindings.Path, _session.KeyBindings.Content, _session.KeyBindings.Encoding);
-        AtomicFileWriter.WriteAllText(_session.Sensitivity.Path, _session.Sensitivity.Content, _session.Sensitivity.Encoding);
+        FlushPendingSensitivityWrite();
         StatusMessage = "应用成功。";
     }
 
@@ -181,3 +235,4 @@ public sealed record LoadResult(bool IsSuccess, string? Error)
     public static LoadResult Success() => new(true, null);
     public static LoadResult Failure(string error) => new(false, error);
 }
+
