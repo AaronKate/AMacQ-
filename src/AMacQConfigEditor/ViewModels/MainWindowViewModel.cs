@@ -97,7 +97,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (baseValue is null)
             return SensitivityAdjustmentResult.Failure($"当前枪械缺少 {axis} 轴灵敏度配置，未进行修改。");
 
-        var delta = direction > 0 ? 0.05m : -0.05m;
+        var delta = direction > 0 ? 0.01m : -0.01m;
         var newBaseValue = AdjustSensitivityBy(baseValue, delta);
         var updatedContent = LuaConfigService.SetNumber(_session.Sensitivity.Content, baseName, newBaseValue);
         AtomicFileWriter.WriteAllText(_session.Sensitivity.Path, updatedContent, _session.Sensitivity.Encoding);

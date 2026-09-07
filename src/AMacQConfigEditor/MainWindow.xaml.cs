@@ -40,6 +40,7 @@ public partial class MainWindow : Window
     private const int HotKeyYDecrease = 3;
     private const int HotKeyYIncrease = 4;
     private const int HotKeyStep = 5;
+    private const int HotKeyWeaponMenu = 6;
     private const int TrayMenuCornerRadius = 10;
     private readonly Forms.ContextMenuStrip _trayMenu = new();
     private readonly HashSet<Forms.ToolStripDropDown> _roundedTrayMenus = [];
@@ -84,6 +85,11 @@ public partial class MainWindow : Window
         {
             DownloadConfirmOverlay.Visibility = Visibility.Collapsed;
             LogitechGHubLauncher.OpenDownloadPage();
+        };
+        DownloadConfirmAcknowledgeButton.Click += (_, _) =>
+        {
+            DownloadConfirmOverlay.Visibility = Visibility.Collapsed;
+            DeployEmbeddedPackage();
         };
         HelpBtn.Click += (_, _) => new HelpWindow(this).ShowDialog();
         SaveBtn.Click += (_, _) => SaveChanges();
@@ -145,6 +151,7 @@ public partial class MainWindow : Window
         RegisterGlobalHotKey(HotKeyXIncrease, 0x27, "Ctrl + Alt + 右方向键");
         RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "Ctrl + Alt + 下方向键");
         RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "Ctrl + Alt + 上方向键");
+        RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "Ctrl + Alt + M");
         RefreshTrayWeaponMenu();
     }
 
@@ -175,8 +182,29 @@ public partial class MainWindow : Window
             HotKeyYIncrease => (AdjustX: false, Direction: 1),
             _ => (AdjustX: true, Direction: 0)
         };
+        if (id == HotKeyWeaponMenu)
+        {
+            ShowWeaponMenuFromHotKey();
+            return IntPtr.Zero;
+        }
+
         if (adjustment.Direction != 0) ApplyHotKeyAdjustment(adjustment.AdjustX, adjustment.Direction);
         return IntPtr.Zero;
+    }
+
+    private void ShowWeaponMenuFromHotKey()
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            RefreshTrayWeaponMenu();
+            if (_trayMenu.Visible)
+            {
+                _trayMenu.Close();
+                return;
+            }
+
+            _trayMenu.Show(Forms.Cursor.Position);
+        }));
     }
 
     private void ApplyHotKeyAdjustment(bool adjustX, int direction)
@@ -379,7 +407,7 @@ public partial class MainWindow : Window
 
         if (_trayCurrentWeaponStatus is not null)
         {
-            var weapon = string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon) ? "未选择" : _viewModel.SelectedWeapon;
+            var weapon = string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon) ? "未选择" : GetWeaponDisplayName(_viewModel.SelectedWeapon);
             _trayCurrentWeaponStatus.Text = $"当前枪械：{weapon}";
         }
 
@@ -391,25 +419,49 @@ public partial class MainWindow : Window
             return;
         }
 
-        foreach (var weapon in _viewModel.Weapons)
+        var categoryOrder = new[] { "突击步枪", "冲锋枪", "轻机枪", "射手步枪", "狙击步枪", "霰弹枪", "手枪", "其他" };
+        var groupedWeapons = _viewModel.Weapons
+            .GroupBy(GetWeaponCategory)
+            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
+
+        foreach (var category in categoryOrder)
         {
-            var weaponMenu = new Forms.ToolStripMenuItem(weapon)
+            if (!groupedWeapons.TryGetValue(category, out var weapons) || weapons.Length == 0) continue;
+
+            var categoryMenu = new Forms.ToolStripMenuItem(category);
+            ConfigureTrayDropDown(categoryMenu.DropDown);
+            foreach (var weapon in weapons)
             {
-                Checked = string.Equals(_viewModel.SelectedWeapon, weapon, StringComparison.Ordinal)
-            };
-            ConfigureTrayDropDown(weaponMenu.DropDown);
-            weaponMenu.DropDownItems.Add(new Forms.ToolStripMenuItem("仅选择此枪械", null, (_, _) =>
-            {
-                SelectWeaponFromTray(weapon);
-                _trayMenu.Close();
-            }));
-            weaponMenu.DropDownItems.Add(new Forms.ToolStripSeparator());
-            AddTrayBindingMenu(weaponMenu, weapon, "无修饰键", "qq1156777787", nameof(MainWindowViewModel.PrimaryKey));
-            AddTrayBindingMenu(weaponMenu, weapon, "按住 Alt", "qq1156777787_second", nameof(MainWindowViewModel.AltKey));
-            AddTrayBindingMenu(weaponMenu, weapon, "按住 Ctrl", "Third", nameof(MainWindowViewModel.CtrlKey));
-            _trayWeaponMenu.DropDownItems.Add(weaponMenu);
+                var weaponMenu = new Forms.ToolStripMenuItem(GetWeaponDisplayName(weapon))
+                {
+                    Checked = string.Equals(_viewModel.SelectedWeapon, weapon, StringComparison.Ordinal)
+                };
+                ConfigureTrayDropDown(weaponMenu.DropDown);
+                weaponMenu.DropDownItems.Add(new Forms.ToolStripMenuItem("仅选择此枪械", null, (_, _) =>
+                {
+                    SelectWeaponFromTray(weapon);
+                    _trayMenu.Close();
+                }));
+                weaponMenu.DropDownItems.Add(new Forms.ToolStripSeparator());
+                AddTrayBindingMenu(weaponMenu, weapon, "无修饰键", "qq1156777787", nameof(MainWindowViewModel.PrimaryKey));
+                AddTrayBindingMenu(weaponMenu, weapon, "按住 Alt", "qq1156777787_second", nameof(MainWindowViewModel.AltKey));
+                AddTrayBindingMenu(weaponMenu, weapon, "按住 Ctrl", "Third", nameof(MainWindowViewModel.CtrlKey));
+                categoryMenu.DropDownItems.Add(weaponMenu);
+            }
+            _trayWeaponMenu.DropDownItems.Add(categoryMenu);
         }
     }
+
+    private static string GetWeaponCategory(string weapon) => weapon switch
+    {
+        "AK12" or "AKM" or "AR57" or "ASVAL" or "ASH" or "AUG" or "M7" or "CAR15" or "G3" or "K416" or "K437" or "KC17" or "M4A1" or "MCX" or "MDR" or "MK47" or "QBZ" or "RM277" or "SCAR" or "SG552" or "TJ191" => "突击步枪",
+        "MK4" or "MP5" or "MP7" or "QCQ17" or "SR3M" or "TOM" or "UZI" or "Vector" or "YeNiu" => "冲锋枪",
+        "M250" or "PKM" or "QJB201" => "轻机枪",
+        "M14" or "PTR32" or "SVCH" => "射手步枪",
+        _ => "其他"
+    };
+
+    private static string GetWeaponDisplayName(string? weapon) => WeaponNameMapper.GetDisplayName(weapon);
 
     private void AddTrayBindingMenu(Forms.ToolStripMenuItem weaponMenu, string weapon, string label, string suffix, string propertyName)
     {
@@ -505,7 +557,7 @@ public partial class MainWindow : Window
         _viewModel.SelectedWeapon = weapon.Name;
         RefreshKeyOptions();
         SelectedLabel.Text = "当前枪械：";
-        SelectedWeaponLabel.Text = weapon.Name;
+        SelectedWeaponLabel.Text = weapon.DisplayName;
         RefreshTrayWeaponMenu();
     }
 
@@ -515,12 +567,12 @@ public partial class MainWindow : Window
 
         _weaponSearchPrefix += args.Text;
         var matchedWeapon = WeaponList.Items.OfType<WeaponListItem>()
-            .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase) || weapon.DisplayName.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
         if (matchedWeapon is null)
         {
             _weaponSearchPrefix = args.Text;
             matchedWeapon = WeaponList.Items.OfType<WeaponListItem>()
-                .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase) || weapon.DisplayName.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
         }
 
         if (matchedWeapon is not null)
@@ -665,6 +717,7 @@ public partial class MainWindow : Window
 
     private sealed record WeaponListItem(string Name, string BindingSummary)
     {
+        public string DisplayName => GetWeaponDisplayName(Name);
         public bool HasBindingSummary => !string.IsNullOrWhiteSpace(BindingSummary);
     }
 
