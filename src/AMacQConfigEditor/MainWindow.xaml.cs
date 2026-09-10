@@ -41,11 +41,14 @@ public partial class MainWindow : Window
     private const int HotKeyYIncrease = 4;
     private const int HotKeyWeaponMenu = 6;
     private const int TrayMenuCornerRadius = 10;
+    // 托盘菜单通常从屏幕右下角弹出。固定子菜单向左展开，保证多级菜单始终
+    // 沿同一方向排列，鼠标移动到更深层菜单时不会穿过上一级菜单。
+    private const Forms.ToolStripDropDownDirection TraySubMenuDirection = Forms.ToolStripDropDownDirection.Left;
     private readonly Forms.ContextMenuStrip _trayMenu = new();
     private readonly HashSet<Forms.ToolStripDropDown> _roundedTrayMenus = [];
     private readonly HashSet<Forms.ToolStripDropDown> _configuredTrayMenus = [];
+    private readonly List<Forms.ToolStripItem> _trayWeaponMenuItems = [];
     private Forms.ToolStripMenuItem? _trayCurrentWeaponStatus;
-    private Forms.ToolStripMenuItem? _trayWeaponMenu;
     private bool _trayMenuDirty = true;
     private HwndSource? _windowSource;
     private IntPtr _windowHandle;
@@ -136,9 +139,6 @@ public partial class MainWindow : Window
         _trayMenu.Items.Add("打开主窗口", null, (_, _) => RestoreFromTray());
         _trayCurrentWeaponStatus = new Forms.ToolStripMenuItem { Enabled = false };
         _trayMenu.Items.Add(_trayCurrentWeaponStatus);
-        _trayWeaponMenu = new Forms.ToolStripMenuItem("选择枪械");
-        ConfigureTrayDropDown(_trayWeaponMenu.DropDown);
-        _trayMenu.Items.Add(_trayWeaponMenu);
         _trayMenu.Items.Add(new Forms.ToolStripSeparator());
         _trayMenu.Items.Add("退出", null, (_, _) => Close());
         _trayIcon.ContextMenuStrip = _trayMenu;
@@ -433,18 +433,24 @@ public partial class MainWindow : Window
 
     private void RefreshTrayWeaponMenu()
     {
-        if (_trayWeaponMenu is null) return;
-
         UpdateTrayCurrentWeaponStatus();
 
         // 重建前先递归释放整棵旧菜单树：若只 Clear 而不 Dispose，被换掉的菜单项及其
         // 子 DropDown、字体、渲染器会因 _roundedTrayMenus 等集合的强引用而无法回收，
         // 每切换一次枪械或调整一次灵敏度都会遗留一批，导致内存持续增长。
-        DisposeMenuItems(_trayWeaponMenu.DropDownItems);
-        _trayWeaponMenu.DropDownItems.Clear();
+        foreach (var item in _trayWeaponMenuItems)
+        {
+            if (item is Forms.ToolStripDropDownItem { DropDownItems.Count: > 0 } dropDownItem)
+            {
+                DisposeMenuItems(dropDownItem.DropDownItems);
+            }
+            item.Dispose();
+        }
+        _trayWeaponMenuItems.Clear();
+
         if (_viewModel.Weapons.Count == 0)
         {
-            _trayWeaponMenu.DropDownItems.Add(new Forms.ToolStripMenuItem("尚未加载配置") { Enabled = false });
+            AddTrayWeaponMenuItem(new Forms.ToolStripMenuItem("尚未加载配置") { Enabled = false });
             return;
         }
 
@@ -458,12 +464,14 @@ public partial class MainWindow : Window
             if (!groupedWeapons.TryGetValue(category, out var weapons) || weapons.Length == 0) continue;
 
             var categoryMenu = new Forms.ToolStripMenuItem(category);
+            categoryMenu.DropDownDirection = TraySubMenuDirection;
             ConfigureTrayDropDown(categoryMenu.DropDown);
             foreach (var weapon in weapons)
             {
                 var weaponMenu = new Forms.ToolStripMenuItem(GetWeaponDisplayName(weapon))
                 {
-                    Checked = string.Equals(_viewModel.SelectedWeapon, weapon, StringComparison.Ordinal)
+                    Checked = string.Equals(_viewModel.SelectedWeapon, weapon, StringComparison.Ordinal),
+                    DropDownDirection = TraySubMenuDirection
                 };
                 ConfigureTrayDropDown(weaponMenu.DropDown);
                 weaponMenu.DropDownItems.Add(new Forms.ToolStripMenuItem("仅选择此枪械", null, (_, _) =>
@@ -477,8 +485,20 @@ public partial class MainWindow : Window
                 AddTrayBindingMenu(weaponMenu, weapon, "按住 Ctrl", "Third", nameof(MainWindowViewModel.CtrlKey));
                 categoryMenu.DropDownItems.Add(weaponMenu);
             }
-            _trayWeaponMenu.DropDownItems.Add(categoryMenu);
+            AddTrayWeaponMenuItem(categoryMenu);
         }
+    }
+
+    private void AddTrayWeaponMenuItem(Forms.ToolStripItem item)
+    {
+        var separatorIndex = _trayMenu.Items
+            .Cast<Forms.ToolStripItem>()
+            .ToList()
+            .FindIndex(candidate => candidate is Forms.ToolStripSeparator);
+        if (separatorIndex < 0) separatorIndex = _trayMenu.Items.Count;
+
+        _trayMenu.Items.Insert(separatorIndex, item);
+        _trayWeaponMenuItems.Add(item);
     }
 
     private void UpdateTrayCurrentWeaponStatus()
@@ -514,7 +534,10 @@ public partial class MainWindow : Window
 
     private void AddTrayBindingMenu(Forms.ToolStripMenuItem weaponMenu, string weapon, string label, string suffix, string propertyName)
     {
-        var bindingMenu = new Forms.ToolStripMenuItem(label);
+        var bindingMenu = new Forms.ToolStripMenuItem(label)
+        {
+            DropDownDirection = TraySubMenuDirection
+        };
         ConfigureTrayDropDown(bindingMenu.DropDown);
         var currentValue = _viewModel.GetBindingValue(weapon, suffix);
         foreach (var option in KeyOptionsFor(MouseModelList.SelectedValue?.ToString(), currentValue))
