@@ -33,8 +33,12 @@ public partial class MainWindow : Window
     private readonly Forms.NotifyIcon _trayIcon = new();
     private const int WmHotKey = 0x0312;
     private const uint ModAlt = 0x0001;
-    private const uint ModControl = 0x0002;
+    private const uint ModShift = 0x0004;
     private const uint ModNoRepeat = 0x4000;
+    private const int VkLeftShift = 0xA0;
+    private const int VkRightShift = 0xA1;
+    private const int VkLeftMenu = 0xA4;
+    private const int VkRightMenu = 0xA5;
     private const int HotKeyXDecrease = 1;
     private const int HotKeyXIncrease = 2;
     private const int HotKeyYDecrease = 3;
@@ -65,6 +69,9 @@ public partial class MainWindow : Window
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
 
     public MainWindow()
     {
@@ -173,18 +180,25 @@ public partial class MainWindow : Window
         _windowSource = HwndSource.FromHwnd(_windowHandle);
         _windowSource?.AddHook(HandleWindowMessage);
 
-        RegisterGlobalHotKey(HotKeyXDecrease, 0x25, "Ctrl + Alt + 左方向键");
-        RegisterGlobalHotKey(HotKeyXIncrease, 0x27, "Ctrl + Alt + 右方向键");
-        RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "Ctrl + Alt + 下方向键");
-        RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "Ctrl + Alt + 上方向键");
-        RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "Ctrl + Alt + M");
-        RegisterGlobalHotKey(HotKeyYFastDecrease, 0xBD, "Ctrl + Alt + -");
-        RegisterGlobalHotKey(HotKeyYFastIncrease, 0xBB, "Ctrl + Alt + =");
+        RegisterGlobalHotKey(HotKeyXDecrease, 0x25, "右 Alt + 右 Shift + 左方向键");
+        RegisterGlobalHotKey(HotKeyXIncrease, 0x27, "右 Alt + 右 Shift + 右方向键");
+        RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "右 Alt + 右 Shift + 下方向键");
+        RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "右 Alt + 右 Shift + 上方向键");
+        RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "右 Alt + 右 Shift + M");
+        RegisterGlobalHotKey(HotKeyYFastDecrease, 0xBD, "右 Alt + 右 Shift + -");
+        RegisterGlobalHotKey(HotKeyYFastIncrease, 0xBB, "右 Alt + 右 Shift + =");
     }
+
+    private static bool IsPressed(int virtualKey) => (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
+
+    // RegisterHotKey cannot distinguish left/right modifiers, so verify the physical keys here.
+    private static bool IsRightSideModifierCombo() =>
+        IsPressed(VkRightMenu) && IsPressed(VkRightShift) &&
+        !IsPressed(VkLeftMenu) && !IsPressed(VkLeftShift);
 
     private void RegisterGlobalHotKey(int id, uint virtualKey, string shortcut)
     {
-        if (RegisterHotKey(_windowHandle, id, ModControl | ModAlt | ModNoRepeat, virtualKey))
+        if (RegisterHotKey(_windowHandle, id, ModAlt | ModShift | ModNoRepeat, virtualKey))
         {
             _registeredHotKeys.Add(id);
             return;
@@ -201,6 +215,8 @@ public partial class MainWindow : Window
         if (!_registeredHotKeys.Contains(id)) return IntPtr.Zero;
 
         handled = true;
+        if (!IsRightSideModifierCombo()) return IntPtr.Zero;
+
         if (id is HotKeyYFastDecrease or HotKeyYFastIncrease)
         {
             ApplyHotKeyAdjustment(false, id == HotKeyYFastIncrease ? 1 : -1, 0.05m);
