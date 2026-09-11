@@ -40,6 +40,8 @@ public partial class MainWindow : Window
     private const int HotKeyYDecrease = 3;
     private const int HotKeyYIncrease = 4;
     private const int HotKeyWeaponMenu = 6;
+    private const int HotKeyYFastDecrease = 7;
+    private const int HotKeyYFastIncrease = 8;
     private const int TrayMenuCornerRadius = 10;
     // 托盘菜单通常从屏幕右下角弹出。固定子菜单向左展开，保证多级菜单始终
     // 沿同一方向排列，鼠标移动到更深层菜单时不会穿过上一级菜单。
@@ -49,6 +51,7 @@ public partial class MainWindow : Window
     private readonly HashSet<Forms.ToolStripDropDown> _configuredTrayMenus = [];
     private readonly List<Forms.ToolStripItem> _trayWeaponMenuItems = [];
     private Forms.ToolStripMenuItem? _trayCurrentWeaponStatus;
+    private Forms.ToolStripMenuItem? _traySensitivityStatus;
     private bool _trayMenuDirty = true;
     private HwndSource? _windowSource;
     private IntPtr _windowHandle;
@@ -136,14 +139,31 @@ public partial class MainWindow : Window
         _trayMenu.ShowCheckMargin = true;
         _trayMenu.Font = new Drawing.Font("Segoe UI", 11F);
         _trayMenu.ItemAdded += (_, args) => StyleTrayMenuItem(args.Item);
-        _trayMenu.Items.Add("打开主窗口", null, (_, _) => RestoreFromTray());
+        _trayMenu.Items.Add("打开主窗口", null, (_, _) =>
+        {
+            _trayMenu.Close();
+            RestoreFromTray();
+        });
         _trayCurrentWeaponStatus = new Forms.ToolStripMenuItem { Enabled = false };
         _trayMenu.Items.Add(_trayCurrentWeaponStatus);
+        _traySensitivityStatus = new Forms.ToolStripMenuItem
+        {
+            DropDownDirection = TraySubMenuDirection,
+            ToolTipText = "点击展开，每次调整 0.05 并自动保存"
+        };
+        ConfigureTrayDropDown(_traySensitivityStatus.DropDown);
+        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("X −0.05", null, (_, _) => AdjustTraySensitivity(true, -1, 0.05m)));
+        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("X +0.05", null, (_, _) => AdjustTraySensitivity(true, 1, 0.05m)));
+        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripSeparator());
+        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("Y −0.05", null, (_, _) => AdjustTraySensitivity(false, -1, 0.05m)));
+        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("Y +0.05", null, (_, _) => AdjustTraySensitivity(false, 1, 0.05m)));
+        _trayMenu.Items.Add(_traySensitivityStatus);
         _trayMenu.Items.Add(new Forms.ToolStripSeparator());
         _trayMenu.Items.Add("退出", null, (_, _) => Close());
         _trayIcon.ContextMenuStrip = _trayMenu;
         _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
         _trayMenu.Opening += (_, _) => RefreshTrayWeaponMenuIfNeeded();
+        _trayMenu.Closing += HandleTrayMenuClosing;
         _trayIcon.Visible = true;
     }
 
@@ -158,6 +178,8 @@ public partial class MainWindow : Window
         RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "Ctrl + Alt + 下方向键");
         RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "Ctrl + Alt + 上方向键");
         RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "Ctrl + Alt + M");
+        RegisterGlobalHotKey(HotKeyYFastDecrease, 0xBD, "Ctrl + Alt + -");
+        RegisterGlobalHotKey(HotKeyYFastIncrease, 0xBB, "Ctrl + Alt + =");
     }
 
     private void RegisterGlobalHotKey(int id, uint virtualKey, string shortcut)
@@ -179,6 +201,12 @@ public partial class MainWindow : Window
         if (!_registeredHotKeys.Contains(id)) return IntPtr.Zero;
 
         handled = true;
+        if (id is HotKeyYFastDecrease or HotKeyYFastIncrease)
+        {
+            ApplyHotKeyAdjustment(false, id == HotKeyYFastIncrease ? 1 : -1, 0.05m);
+            return IntPtr.Zero;
+        }
+
         var adjustment = id switch
         {
             HotKeyXDecrease => (AdjustX: true, Direction: -1),
@@ -212,16 +240,16 @@ public partial class MainWindow : Window
         }));
     }
 
-    private void ApplyHotKeyAdjustment(bool adjustX, int direction)
+    private void ApplyHotKeyAdjustment(bool adjustX, int direction, decimal step = 0.01m)
     {
-        var result = _viewModel.AdjustCurrentWeaponSensitivity(adjustX, direction);
+        var result = _viewModel.AdjustCurrentWeaponSensitivity(adjustX, direction, step);
         if (!result.IsSuccess)
         {
             QueueHotKeyNotification(result.Error ?? "当前枪械灵敏度调整失败。", Forms.ToolTipIcon.Warning);
             return;
         }
 
-        // 托盘菜单不展示灵敏度数值，无需在每次微调后重建整棵菜单。
+        // 托盘菜单第一层的灵敏度状态会实时刷新，无需在每次微调后重建整棵枪械菜单。
         QueueHotKeyNotification($"{result.Weapon} 的基础 {result.Axis} 已调整为 {result.BaseValue}，增幅值保持不变。", Forms.ToolTipIcon.Info);
     }
 
@@ -379,6 +407,7 @@ public partial class MainWindow : Window
         dropDown.Renderer = new TrayMenuRenderer(this);
         dropDown.Font = new Drawing.Font("Segoe UI", 11F);
         dropDown.ItemAdded += (_, args) => StyleTrayMenuItem(args.Item);
+        dropDown.Closing += HandleTrayMenuClosing;
         if (dropDown is Forms.ToolStripDropDownMenu menu)
         {
             menu.ShowImageMargin = false;
@@ -501,11 +530,51 @@ public partial class MainWindow : Window
         _trayWeaponMenuItems.Add(item);
     }
 
+    private void AdjustTraySensitivity(bool adjustX, int direction, decimal step)
+    {
+        if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon))
+        {
+            _trayIcon.ShowBalloonTip(2000, "AMacQ", "请先选择枪械。", Forms.ToolTipIcon.Warning);
+            return;
+        }
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            var result = _viewModel.AdjustCurrentWeaponSensitivity(adjustX, direction, step);
+            if (!result.IsSuccess)
+            {
+                _trayIcon.ShowBalloonTip(2000, "AMacQ", result.Error ?? "当前枪械灵敏度调整失败。", Forms.ToolTipIcon.Warning);
+                return;
+            }
+
+            // 保存由 ViewModel 统一延迟处理：连续调整会不断取消上一次任务，
+            // 仅在停止操作后写入一次，避免快速点击造成频繁磁盘写入。
+            _viewModel.RefreshSelectedWeaponValues();
+            MarkTrayWeaponMenuDirty();
+            UpdateTrayCurrentWeaponStatus();
+        }));
+    }
+
+    private void HandleTrayMenuClosing(object? sender, Forms.ToolStripDropDownClosingEventArgs e)
+    {
+        if (e.CloseReason == Forms.ToolStripDropDownCloseReason.ItemClicked) e.Cancel = true;
+    }
+
     private void UpdateTrayCurrentWeaponStatus()
     {
         if (_trayCurrentWeaponStatus is null) return;
         var weapon = string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon) ? "未选择" : GetWeaponDisplayName(_viewModel.SelectedWeapon);
         _trayCurrentWeaponStatus.Text = $"当前枪械：{weapon}";
+        if (_traySensitivityStatus is null) return;
+        if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon))
+        {
+            _traySensitivityStatus.Text = "当前灵敏度：—";
+            return;
+        }
+        var currentWeapon = _viewModel.SelectedWeapon!;
+        var sensitivityX = _viewModel.GetSensitivityValue(currentWeapon, "qq1156777787_X");
+        var sensitivityY = _viewModel.GetSensitivityValue(currentWeapon, "qq1156777787_Y");
+        _traySensitivityStatus.Text = $"当前灵敏度：X {sensitivityX} / Y {sensitivityY}";
     }
 
     private static void DisposeMenuItems(Forms.ToolStripItemCollection items)

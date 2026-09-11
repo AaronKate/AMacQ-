@@ -20,7 +20,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     private string _statusMessage = "请选择两个 Lua 配置文件。";
     private readonly object _sensitivityWriteLock = new();
     private CancellationTokenSource? _sensitivityWriteCancellation;
-    private const int SensitivityWriteDelayMilliseconds = 300;
+    private const int SensitivityWriteDelayMilliseconds = 2000;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -85,12 +85,15 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     public string GetBindingValue(string weapon, string suffix) =>
         _session is null ? "0" : LuaConfigService.GetNumber(_session.KeyBindings.Content, $"{weapon}_{suffix}") ?? "0";
 
+    public string GetSensitivityValue(string weapon, string suffix) =>
+        _session is null ? "0" : LuaConfigService.GetNumber(_session.Sensitivity.Content, $"{weapon}_{suffix}") ?? "0";
+
     public void RefreshSelectedWeaponValues()
     {
         LoadSelectedWeaponValues();
     }
 
-    public SensitivityAdjustmentResult AdjustCurrentWeaponSensitivity(bool adjustX, int direction)
+    public SensitivityAdjustmentResult AdjustCurrentWeaponSensitivity(bool adjustX, int direction, decimal step = 0.01m)
     {
         if (_session is null || string.IsNullOrWhiteSpace(SelectedWeapon))
             return SensitivityAdjustmentResult.Failure("尚未加载配置或选择枪械。");
@@ -103,7 +106,7 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         if (baseValue is null)
             return SensitivityAdjustmentResult.Failure($"当前枪械缺少 {axis} 轴灵敏度配置，未进行修改。");
 
-        var delta = direction > 0 ? 0.01m : -0.01m;
+        var delta = direction > 0 ? step : -step;
         var newBaseValue = AdjustSensitivityBy(baseValue, delta);
         var updatedContent = LuaConfigService.SetNumber(_session.Sensitivity.Content, baseName, newBaseValue);
         _session.Sensitivity.Content = updatedContent;

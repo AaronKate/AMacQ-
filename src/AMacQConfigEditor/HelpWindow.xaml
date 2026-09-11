@@ -279,31 +279,34 @@
                 <TextBlock Text="按住鼠标左键，或按住右键再按左键，如果看到鼠标自动往下滑，说明宏已生效。" TextWrapping="Wrap"
                            FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,6,0,18"/>
 
-                <TextBlock Text="1. 打开配置文件管理" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                <TextBlock Text="1. 部署并生成桌面脚本" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                <TextBlock Text="在 AMacQ 配置编辑器中点击“一键部署”。部署完成后，会在桌面生成“GHUB - Sorin 25.1 S11-1.lua”；后续步骤会将这个文件导入罗技 G HUB。" TextWrapping="Wrap"
+                           FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,18"/>
+                <TextBlock Text="2. 打开配置文件管理" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
                 <TextBlock Text="在右上角打开当前配置文件的下拉菜单，然后点击“管理配置文件”。" TextWrapping="Wrap"
                            FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,8"/>
                 <Image Source="Resources/Guide/01-open-profile-menu.png" MaxWidth="640" MaxHeight="340" Stretch="Uniform" HorizontalAlignment="Left"
                        Cursor="Hand" ToolTip="点击放大查看" MouseLeftButtonUp="OpenGuideImage"/>
 
-                <TextBlock Text="2. 选择桌面配置文件" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
+                <TextBlock Text="3. 选择桌面配置文件" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
                 <TextBlock Text="在配置文件列表中选择“桌面”，进入该配置文件。" TextWrapping="Wrap"
                            FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,8"/>
                 <Image Source="Resources/Guide/02-select-desktop-profile.png" MaxWidth="640" MaxHeight="440" Stretch="Uniform" HorizontalAlignment="Left"
                        Cursor="Hand" ToolTip="点击放大查看" MouseLeftButtonUp="OpenGuideImage"/>
 
-                <TextBlock Text="3. 创建 LUA 脚本" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
+                <TextBlock Text="4. 创建 LUA 脚本" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
                 <TextBlock Text="点击配置文件卡片右侧的三点菜单，选择“创建 LUA 脚本”。" TextWrapping="Wrap"
                            FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,8"/>
                 <Image Source="Resources/Guide/03-create-lua-script.png" MaxWidth="640" MaxHeight="440" Stretch="Uniform" HorizontalAlignment="Left"
                        Cursor="Hand" ToolTip="点击放大查看" MouseLeftButtonUp="OpenGuideImage"/>
 
-                <TextBlock Text="4. 导入脚本文件" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
-                <TextBlock Text="在脚本编辑器左上角打开菜单，点击“导入”，并选择部署后生成的 LUA 启动脚本。" TextWrapping="Wrap"
+                <TextBlock Text="5. 导入脚本文件" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
+                <TextBlock Text="在脚本编辑器左上角打开菜单，点击“导入”，选择桌面上生成的“GHUB - Sorin 25.1 S11-1.lua”。" TextWrapping="Wrap"
                            FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,8"/>
                 <Image Source="Resources/Guide/04-import-lua-file.png" MaxWidth="640" MaxHeight="340" Stretch="Uniform" HorizontalAlignment="Left"
                        Cursor="Hand" ToolTip="点击放大查看" MouseLeftButtonUp="OpenGuideImage"/>
 
-                <TextBlock Text="5. 保存并运行" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
+                <TextBlock Text="6. 保存并运行" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,22,0,0"/>
                 <TextBlock Text="导入完成后，在同一菜单中点击“保存并运行”，使脚本立即生效。" TextWrapping="Wrap"
                            FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,4,0,8"/>
                 <Image Source="Resources/Guide/05-save-and-run.png" MaxWidth="640" MaxHeight="340" Stretch="Uniform" HorizontalAlignment="Left"
@@ -325,6 +328,27 @@
                                FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0"/>
                     <TextBlock Text="关闭宏：按下鼠标中键（按下滚轮）即可关闭宏。" TextWrapping="Wrap"
                                FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,12,0,0"/>
+                  </StackPanel>
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
+          </TabItem>
+          <TabItem Header="程序快捷键" Style="{StaticResource DarkTabItem}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="0,0,12,0">
+                <Border Background="{DynamicResource InputSurfaceBrush}" BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="7" Padding="16">
+                  <StackPanel>
+                    <TextBlock Text="程序快捷键" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
+                    <TextBlock Text="以下快捷键为全局快捷键，按下一次触发一次，长按不会重复触发。主窗口最小化到托盘后仍可使用。" TextWrapping="Wrap"
+                               FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="22"/>
+                    <TextBlock Text="Ctrl + Alt + 左方向键：当前枪械基础灵敏度 X −0.01。&#x0a;Ctrl + Alt + 右方向键：当前枪械基础灵敏度 X +0.01。&#x0a;Ctrl + Alt + 下方向键：当前枪械基础灵敏度 Y −0.01。&#x0a;Ctrl + Alt + 上方向键：当前枪械基础灵敏度 Y +0.01。&#x0a;Ctrl + Alt + -：当前枪械基础灵敏度 Y −0.05。&#x0a;Ctrl + Alt + =：当前枪械基础灵敏度 Y +0.05。&#x0a;Ctrl + Alt + M：打开或关闭桌面枪械快捷菜单，菜单中可选择枪械并修改按键绑定。" TextWrapping="Wrap"
+                               FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="24"/>
+                    <TextBlock Text="灵敏度快捷键和托盘灵敏度调整只调整当前选中枪械的基础 X/Y 值，不修改增幅值；连续调整会合并为一次写入，停止操作约 2 秒后会自动保存到灵敏度配置文件。" TextWrapping="Wrap"
+                               FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,12,0,0" LineHeight="22"/>
+                    <TextBlock Text="托盘菜单第一层的“当前灵敏度”行可展开，分别提供当前枪械 X/Y 的 −0.05、+0.05 调整；连续调整时菜单保持打开。" TextWrapping="Wrap"
+                               FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="22"/>
+                    <TextBlock Text="如果快捷键被其他程序占用，托盘区会提示注册失败；此时请更换或关闭占用该快捷键的程序。" TextWrapping="Wrap"
+                               FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="22"/>
                   </StackPanel>
                 </Border>
               </StackPanel>
