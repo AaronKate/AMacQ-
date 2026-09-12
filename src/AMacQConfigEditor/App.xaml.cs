@@ -12,6 +12,7 @@ public partial class App : Application
     {
         base.OnStartup(eventArgs);
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+        TechnologyThemeService.Initialize(eventArgs.Args);
 
         ObscuredPackageDeploymentService.CleanupPreviousDeployment();
 
@@ -62,7 +63,12 @@ public partial class App : Application
             var executablePath = Process.GetCurrentProcess().MainModule?.FileName;
             if (string.IsNullOrWhiteSpace(executablePath)) return false;
 
-            Process.Start(new ProcessStartInfo(executablePath) { UseShellExecute = true, Verb = "runas" });
+            Process.Start(new ProcessStartInfo(executablePath)
+            {
+                UseShellExecute = true,
+                Verb = "runas",
+                Arguments = TechnologyThemeService.GetRestartArguments()
+            });
             Shutdown();
             return true;
         }

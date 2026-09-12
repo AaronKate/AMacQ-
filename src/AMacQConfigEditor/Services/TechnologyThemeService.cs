@@ -7,7 +7,9 @@ namespace AMacQConfigEditor.Services;
 
 internal static class TechnologyThemeService
 {
+    private const string ThemeArgumentPrefix = "--amacq-theme=";
     private static readonly Random ThemeRandom = new Random();
+    private static int _currentThemeIndex = -1;
 
     private static readonly TechnologyTheme[] Themes =
     [
@@ -25,15 +27,47 @@ internal static class TechnologyThemeService
         Create("Dark Copper", "#3B2118", "#180D09", "#60351F", "#2C180E", "#FFB06B", "#E37C4B", "#512E20", "#24140D", "#4B2A1D", "#1E100B", "#523020", "#29170F", "#432619", "#21120C", "#3E2317", "#1B0E09", "#B27A50", "#FFD09A", "#72442C", "#D99A64", "#7B452A", "#572F1C"),
     ];
 
-    public static string ApplyRandomTheme(Window window)
+    public static void Initialize(IReadOnlyList<string>? arguments)
     {
-        var theme = Themes[ThemeRandom.Next(Themes.Length)];
+        _currentThemeIndex = ParseThemeIndex(arguments) ?? ThemeRandom.Next(Themes.Length);
+    }
+
+    public static string GetRestartArguments()
+    {
+        EnsureThemeSelected();
+        return $"{ThemeArgumentPrefix}{_currentThemeIndex}";
+    }
+
+    public static string ApplyCurrentTheme(Window window)
+    {
+        EnsureThemeSelected();
+        var theme = Themes[_currentThemeIndex];
         foreach (var color in theme.Colors)
         {
             window.Resources[color.Key] = (Color)ColorConverter.ConvertFromString(color.Value)!;
         }
 
         return theme.Name;
+    }
+
+    private static void EnsureThemeSelected()
+    {
+        if (_currentThemeIndex < 0) _currentThemeIndex = ThemeRandom.Next(Themes.Length);
+    }
+
+    private static int? ParseThemeIndex(IReadOnlyList<string>? arguments)
+    {
+        if (arguments is null) return null;
+
+        foreach (var argument in arguments)
+        {
+            if (!argument.StartsWith(ThemeArgumentPrefix, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!int.TryParse(argument.Substring(ThemeArgumentPrefix.Length), out var index)) return null;
+            if (index >= 0 && index < Themes.Length) return index;
+            return null;
+        }
+
+        return null;
     }
 
     private static TechnologyTheme Create(

@@ -15,7 +15,7 @@ public partial class LicenseWindow : Window
     public LicenseWindow()
     {
         InitializeComponent();
-        TechnologyThemeService.ApplyRandomTheme(this);
+        TechnologyThemeService.ApplyCurrentTheme(this);
         SetWindowIcon();
         MachineCodeBox.Text = MachineCodeService.CurrentMachineCode;
         StatusText.Text = "请将机器码发送给授权方，然后导入返回的许可证文件。";

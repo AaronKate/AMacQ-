@@ -26,14 +26,6 @@ internal sealed class LicenseDocument
 
     public string ToCanonicalPayload() => $"{Version}\n{MachineCode}\n{Mode}\n{ExpiresUtc?.ToUniversalTime().ToString("O") ?? string.Empty}";
 
-    public string ToJson()
-    {
-        var serializer = new DataContractJsonSerializer(typeof(LicenseDocument));
-        using var stream = new MemoryStream();
-        serializer.WriteObject(stream, this);
-        return Encoding.UTF8.GetString(stream.ToArray());
-    }
-
     public static LicenseDocument? FromJson(string json)
     {
         try

@@ -1,7 +1,8 @@
-using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using AMacQConfigEditor.Services;
 
 namespace AMacQConfigEditor;
 
@@ -10,6 +11,8 @@ public partial class AdminPromptWindow : Window
     public AdminPromptWindow()
     {
         InitializeComponent();
+        TechnologyThemeService.ApplyCurrentTheme(this);
+        SetWindowIcon();
         RestartButton.Click += (_, _) => DialogResult = true;
         ContinueButton.Click += (_, _) => DialogResult = false;
         CloseButton.Click += (_, _) => DialogResult = false;
@@ -23,6 +26,16 @@ public partial class AdminPromptWindow : Window
         StatusText.Visibility = Visibility.Visible;
         RestartButton.IsEnabled = false;
         ContinueButton.Focus();
+    }
+
+    private void SetWindowIcon()
+    {
+        using var iconStream = typeof(AdminPromptWindow).Assembly.GetManifestResourceStream("AMacQConfigEditor.Resources.AMacQ.ico");
+        if (iconStream is null) return;
+
+        var icon = BitmapFrame.Create(iconStream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        icon.Freeze();
+        Icon = icon;
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)

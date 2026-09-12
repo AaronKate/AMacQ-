@@ -50,7 +50,6 @@ internal static class ObscuredPackageDeploymentService
         return File.Exists(path) ? path : null;
     }
 
-    public static string? GetInstallDirectory() => TryGetInstallDirectory();
     /// <summary>
     /// 清理上一次部署生成在 C 盘根目录的启动脚本。
     /// </summary>

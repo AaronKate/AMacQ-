@@ -33,12 +33,10 @@ public partial class MainWindow : Window
     private readonly Forms.NotifyIcon _trayIcon = new();
     private const int WmHotKey = 0x0312;
     private const uint ModAlt = 0x0001;
-    private const uint ModShift = 0x0004;
+    private const uint ModControl = 0x0002;
     private const uint ModNoRepeat = 0x4000;
-    private const int VkLeftShift = 0xA0;
-    private const int VkRightShift = 0xA1;
-    private const int VkLeftMenu = 0xA4;
-    private const int VkRightMenu = 0xA5;
+    private const int VkControl = 0x11;
+    private const int VkMenu = 0x12;
     private const int HotKeyXDecrease = 1;
     private const int HotKeyXIncrease = 2;
     private const int HotKeyYDecrease = 3;
@@ -57,12 +55,17 @@ public partial class MainWindow : Window
     private Forms.ToolStripMenuItem? _trayCurrentWeaponStatus;
     private Forms.ToolStripMenuItem? _traySensitivityStatus;
     private bool _trayMenuDirty = true;
+    private bool _keepTrayMenuOpenForSensitivity;
     private HwndSource? _windowSource;
     private IntPtr _windowHandle;
     private readonly HashSet<int> _registeredHotKeys = [];
     private string _weaponSearchPrefix = string.Empty;
     private string? _pendingHotKeyNotification;
     private Forms.ToolTipIcon _pendingHotKeyNotificationIcon = Forms.ToolTipIcon.Info;
+    private IntPtr _trayOutsideClickHook;
+    private WinEventDelegate? _trayOutsideClickHookProc;
+    private const uint EventSystemCaptureStart = 0x0008;
+    private const uint WineventOutOfContext = 0x0000;
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -71,13 +74,29 @@ public partial class MainWindow : Window
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     [DllImport("user32.dll")]
+    private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr WindowFromPoint(Drawing.Point point);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
+
+    private const uint GaRoot = 2;
+
+    private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+
+    [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int virtualKey);
 
     public MainWindow()
     {
         InitializeComponent();
         SourceInitialized += (_, _) => InitializeGlobalHotKeys();
-        TechnologyThemeService.ApplyRandomTheme(this);
+        TechnologyThemeService.ApplyCurrentTheme(this);
         DataContext = _viewModel;
         SetWindowIcon();
         ConfigureTrayIcon();
@@ -159,17 +178,23 @@ public partial class MainWindow : Window
             ToolTipText = "点击展开，每次调整 0.05 并自动保存"
         };
         ConfigureTrayDropDown(_traySensitivityStatus.DropDown);
-        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("X −0.05", null, (_, _) => AdjustTraySensitivity(true, -1, 0.05m)));
-        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("X +0.05", null, (_, _) => AdjustTraySensitivity(true, 1, 0.05m)));
+        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("X −0.05", true, -1, 0.05m));
+        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("X +0.05", true, 1, 0.05m));
         _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripSeparator());
-        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("Y −0.05", null, (_, _) => AdjustTraySensitivity(false, -1, 0.05m)));
-        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripMenuItem("Y +0.05", null, (_, _) => AdjustTraySensitivity(false, 1, 0.05m)));
+        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("Y −0.05", false, -1, 0.05m));
+        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("Y +0.05", false, 1, 0.05m));
         _trayMenu.Items.Add(_traySensitivityStatus);
         _trayMenu.Items.Add(new Forms.ToolStripSeparator());
         _trayMenu.Items.Add("退出", null, (_, _) => Close());
         _trayIcon.ContextMenuStrip = _trayMenu;
         _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
-        _trayMenu.Opening += (_, _) => RefreshTrayWeaponMenuIfNeeded();
+        _trayMenu.Opening += (_, _) =>
+        {
+            RefreshTrayWeaponMenuIfNeeded();
+            StartTrayOutsideClickWatcher();
+        };
+        _trayMenu.Closed += (_, _) => StopTrayOutsideClickWatcher();
+        Closed += (_, _) => StopTrayOutsideClickWatcher();
         _trayMenu.Closing += HandleTrayMenuClosing;
         _trayIcon.Visible = true;
     }
@@ -180,25 +205,23 @@ public partial class MainWindow : Window
         _windowSource = HwndSource.FromHwnd(_windowHandle);
         _windowSource?.AddHook(HandleWindowMessage);
 
-        RegisterGlobalHotKey(HotKeyXDecrease, 0x25, "右 Alt + 右 Shift + 左方向键");
-        RegisterGlobalHotKey(HotKeyXIncrease, 0x27, "右 Alt + 右 Shift + 右方向键");
-        RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "右 Alt + 右 Shift + 下方向键");
-        RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "右 Alt + 右 Shift + 上方向键");
-        RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "右 Alt + 右 Shift + M");
-        RegisterGlobalHotKey(HotKeyYFastDecrease, 0xBD, "右 Alt + 右 Shift + -");
-        RegisterGlobalHotKey(HotKeyYFastIncrease, 0xBB, "右 Alt + 右 Shift + =");
+        RegisterGlobalHotKey(HotKeyXDecrease, 0x25, "Ctrl + Alt + 左方向键");
+        RegisterGlobalHotKey(HotKeyXIncrease, 0x27, "Ctrl + Alt + 右方向键");
+        RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "Ctrl + Alt + 下方向键");
+        RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "Ctrl + Alt + 上方向键");
+        RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "Ctrl + Alt + M");
+        RegisterGlobalHotKey(HotKeyYFastDecrease, 0xBD, "Ctrl + Alt + -");
+        RegisterGlobalHotKey(HotKeyYFastIncrease, 0xBB, "Ctrl + Alt + =");
     }
 
     private static bool IsPressed(int virtualKey) => (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
 
-    // RegisterHotKey cannot distinguish left/right modifiers, so verify the physical keys here.
-    private static bool IsRightSideModifierCombo() =>
-        IsPressed(VkRightMenu) && IsPressed(VkRightShift) &&
-        !IsPressed(VkLeftMenu) && !IsPressed(VkLeftShift);
+    private static bool IsControlAltModifierCombo() =>
+        IsPressed(VkControl) && IsPressed(VkMenu);
 
     private void RegisterGlobalHotKey(int id, uint virtualKey, string shortcut)
     {
-        if (RegisterHotKey(_windowHandle, id, ModAlt | ModShift | ModNoRepeat, virtualKey))
+        if (RegisterHotKey(_windowHandle, id, ModControl | ModAlt | ModNoRepeat, virtualKey))
         {
             _registeredHotKeys.Add(id);
             return;
@@ -215,7 +238,7 @@ public partial class MainWindow : Window
         if (!_registeredHotKeys.Contains(id)) return IntPtr.Zero;
 
         handled = true;
-        if (!IsRightSideModifierCombo()) return IntPtr.Zero;
+        if (!IsControlAltModifierCombo()) return IntPtr.Zero;
 
         if (id is HotKeyYFastDecrease or HotKeyYFastIncrease)
         {
@@ -253,6 +276,7 @@ public partial class MainWindow : Window
             }
 
             _trayMenu.Show(Forms.Cursor.Position);
+            StartTrayOutsideClickWatcher();
         }));
     }
 
@@ -546,6 +570,28 @@ public partial class MainWindow : Window
         _trayWeaponMenuItems.Add(item);
     }
 
+    private Forms.ToolStripMenuItem CreateTraySensitivityMenuItem(string text, bool adjustX, int direction, decimal step)
+    {
+        var item = new Forms.ToolStripMenuItem(text, null, (_, _) => KeepTrayMenuOpenForSensitivityAdjustment(adjustX, direction, step));
+        // WinForms raises the menu's Closing event before the item's Click callback.
+        // Arm the guard on MouseDown so the automatic ItemClicked close can be cancelled.
+        item.MouseDown += (_, _) => _keepTrayMenuOpenForSensitivity = true;
+        item.MouseUp += (_, _) => ResetTraySensitivityMenuGuard();
+        return item;
+    }
+
+    private void KeepTrayMenuOpenForSensitivityAdjustment(bool adjustX, int direction, decimal step)
+    {
+        _keepTrayMenuOpenForSensitivity = true;
+        AdjustTraySensitivity(adjustX, direction, step);
+        ResetTraySensitivityMenuGuard();
+    }
+
+    private void ResetTraySensitivityMenuGuard()
+    {
+        Dispatcher.BeginInvoke(new Action(() => _keepTrayMenuOpenForSensitivity = false), DispatcherPriority.Background);
+    }
+
     private void AdjustTraySensitivity(bool adjustX, int direction, decimal step)
     {
         if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon))
@@ -566,31 +612,89 @@ public partial class MainWindow : Window
             // 保存由 ViewModel 统一延迟处理：连续调整会不断取消上一次任务，
             // 仅在停止操作后写入一次，避免快速点击造成频繁磁盘写入。
             _viewModel.RefreshSelectedWeaponValues();
-            MarkTrayWeaponMenuDirty();
             UpdateTrayCurrentWeaponStatus();
         }));
     }
 
     private void HandleTrayMenuClosing(object? sender, Forms.ToolStripDropDownClosingEventArgs e)
     {
-        if (e.CloseReason == Forms.ToolStripDropDownCloseReason.ItemClicked) e.Cancel = true;
+        if (!_keepTrayMenuOpenForSensitivity) return;
+        if (e.CloseReason is Forms.ToolStripDropDownCloseReason.ItemClicked or Forms.ToolStripDropDownCloseReason.AppClicked)
+        {
+            e.Cancel = true;
+        }
     }
+
+    private void StartTrayOutsideClickWatcher()
+    {
+        if (_trayOutsideClickHook != IntPtr.Zero) return;
+        _trayOutsideClickHookProc ??= OnTrayOutsideClickEvent;
+        _trayOutsideClickHook = SetWinEventHook(EventSystemCaptureStart, EventSystemCaptureStart, IntPtr.Zero, _trayOutsideClickHookProc, 0, 0, WineventOutOfContext);
+    }
+
+    private void StopTrayOutsideClickWatcher()
+    {
+        if (_trayOutsideClickHook == IntPtr.Zero) return;
+        UnhookWinEvent(_trayOutsideClickHook);
+        _trayOutsideClickHook = IntPtr.Zero;
+    }
+
+    private void OnTrayOutsideClickEvent(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+    {
+        if (!_trayMenu.Visible) return;
+
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!_trayMenu.Visible) return;
+            if (_keepTrayMenuOpenForSensitivity) return;
+            if (IsPointOverTrayMenu(Forms.Control.MousePosition)) return;
+            _trayMenu.Close();
+        }));
+    }
+
+    private bool IsPointOverTrayMenu(Drawing.Point screenPoint)
+    {
+        var window = WindowFromPoint(screenPoint);
+        if (window == IntPtr.Zero) return false;
+        var root = GetAncestor(window, GaRoot);
+        if (root == IntPtr.Zero) root = window;
+        return IsTrayMenuHandle(root);
+    }
+
+    private bool IsTrayMenuHandle(IntPtr handle)
+    {
+        if (_trayMenu.IsHandleCreated && _trayMenu.Handle == handle) return true;
+        return IsDropDownHandle(_trayMenu.Items, handle);
+    }
+
+    private static bool IsDropDownHandle(Forms.ToolStripItemCollection items, IntPtr handle)
+    {
+        foreach (Forms.ToolStripItem item in items)
+        {
+            if (item is not Forms.ToolStripDropDownItem dropDownItem) continue;
+            if (dropDownItem.DropDown.Visible && dropDownItem.DropDown.IsHandleCreated && dropDownItem.DropDown.Handle == handle) return true;
+            if (IsDropDownHandle(dropDownItem.DropDownItems, handle)) return true;
+        }
+
+        return false;
+    }
+
 
     private void UpdateTrayCurrentWeaponStatus()
     {
         if (_trayCurrentWeaponStatus is null) return;
         var weapon = string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon) ? "未选择" : GetWeaponDisplayName(_viewModel.SelectedWeapon);
-        _trayCurrentWeaponStatus.Text = $"当前枪械：{weapon}";
+        _trayCurrentWeaponStatus.Text = $"枪械：{weapon}";
         if (_traySensitivityStatus is null) return;
         if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon))
         {
-            _traySensitivityStatus.Text = "当前灵敏度：—";
+            _traySensitivityStatus.Text = "灵敏度：—";
             return;
         }
         var currentWeapon = _viewModel.SelectedWeapon!;
         var sensitivityX = _viewModel.GetSensitivityValue(currentWeapon, "qq1156777787_X");
         var sensitivityY = _viewModel.GetSensitivityValue(currentWeapon, "qq1156777787_Y");
-        _traySensitivityStatus.Text = $"当前灵敏度：X {sensitivityX} / Y {sensitivityY}";
+        _traySensitivityStatus.Text = $"灵敏度：X {sensitivityX} / Y {sensitivityY}";
     }
 
     private static void DisposeMenuItems(Forms.ToolStripItemCollection items)

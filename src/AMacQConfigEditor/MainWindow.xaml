@@ -227,30 +227,7 @@
         </Setter.Value>
       </Setter>
     </Style>
-    <Style x:Key="CenteredComboBoxItem" TargetType="ComboBoxItem">
-      <Setter Property="VerticalContentAlignment" Value="Center"/>
-      <Setter Property="Padding" Value="5,3"/>
-    </Style>
-    <Style x:Key="SidebarButton" TargetType="Button">
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="Button">
-            <Border x:Name="bd" Background="Transparent" CornerRadius="6"
-                    Padding="{TemplateBinding Padding}">
-              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlHoverBrush}"/>
-              </Trigger>
-              <Trigger Property="IsPressed" Value="True">
-                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ControlPressedBrush}"/>
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
+
     <Style x:Key="WeaponListItem" TargetType="ListBoxItem">
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="Foreground" Value="{DynamicResource BodyTextBrush}"/>
