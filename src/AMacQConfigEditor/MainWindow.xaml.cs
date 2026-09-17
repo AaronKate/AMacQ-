@@ -24,6 +24,7 @@ namespace AMacQConfigEditor;
 public partial class MainWindow : Window
 {
     private readonly MainWindowViewModel _viewModel = new();
+    private readonly SensitivityOverlayWindow _sensitivityOverlay = new();
     private readonly Dictionary<string, Control> _fieldInputs = [];
     private string? _keyBindingsPath;
     private string? _sensitivityPath;
@@ -290,7 +291,7 @@ public partial class MainWindow : Window
         }
 
         // 托盘菜单第一层的灵敏度状态会实时刷新，无需在每次微调后重建整棵枪械菜单。
-        QueueHotKeyNotification($"{result.Weapon} 的基础 {result.Axis} 已调整为 {result.BaseValue}，增幅值保持不变。", Forms.ToolTipIcon.Info);
+        ShowSensitivityOverlay();
     }
 
     private void QueueHotKeyNotification(string message, Forms.ToolTipIcon icon)
@@ -336,6 +337,7 @@ public partial class MainWindow : Window
     {
         _hotKeyNotificationTimer.Stop();
         UnregisterGlobalHotKeys();
+        _sensitivityOverlay.CloseOverlay();
         _trayMenu.Dispose();
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
@@ -963,6 +965,15 @@ public partial class MainWindow : Window
         textBox.Text = MainWindowViewModel.AdjustSensitivityValue(textBox.Text, e.Key == Key.Up ? 1 : -1);
         textBox.CaretIndex = textBox.Text.Length;
         e.Handled = true;
+    }
+
+    private void ShowSensitivityOverlay()
+    {
+        if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon)) return;
+        _sensitivityOverlay.ShowWeaponSensitivity(
+            GetWeaponDisplayName(_viewModel.SelectedWeapon),
+            _viewModel.SensitivityX,
+            _viewModel.SensitivityY);
     }
 
     private static void ValidateSensitivityPaste(object sender, DataObjectPastingEventArgs e)

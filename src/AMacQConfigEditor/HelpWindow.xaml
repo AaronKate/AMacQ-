@@ -345,6 +345,8 @@
                                FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="24"/>
                     <TextBlock Text="灵敏度快捷键和托盘灵敏度调整只调整当前选中枪械的基础 X/Y 值，不修改增幅值；连续调整会合并为一次写入，停止操作约 2 秒后会自动保存到灵敏度配置文件。" TextWrapping="Wrap"
                                FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,12,0,0" LineHeight="22"/>
+                    <TextBlock Text="使用上述全局灵敏度快捷键调整后，屏幕右上角会短暂显示枪械名及当前 X/Y 数值；托盘菜单和主窗口内的手动调整不会显示。" TextWrapping="Wrap"
+                               FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="22"/>
                     <TextBlock Text="托盘菜单第一层的“灵敏度”行可展开，分别提供当前枪械 X/Y 的 −0.05、+0.05 调整；连续调整时菜单保持打开。" TextWrapping="Wrap"
                                FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="22"/>
                     <TextBlock Text="如果快捷键被其他程序占用，托盘区会提示注册失败；此时请更换或关闭占用该快捷键的程序。" TextWrapping="Wrap"
