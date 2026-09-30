@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
@@ -363,7 +362,6 @@ public partial class MainWindow : Window
             IProgress<PackageDeploymentProgress> progress = new Progress<PackageDeploymentProgress>(UpdateDeploymentProgress);
             var result = await Task.Run(() => ObscuredPackageDeploymentService.Deploy(progress.Report));
             LoadDefaultFilesIfAvailable();
-            OpenLauncherInExplorer();
             var ghubLaunchResult = LogitechGHubLauncher.TryLaunchInstalledGHub();
             DeploymentStatusText.Text = result.ExtractedTargets.Count > 0
                 ? "部署完成，已就绪"
@@ -421,16 +419,6 @@ public partial class MainWindow : Window
     private void ConfirmOpenDownloadPage()
     {
         DownloadConfirmOverlay.Visibility = Visibility.Visible;
-    }
-
-    private static void OpenLauncherInExplorer()
-    {
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "explorer.exe",
-            Arguments = "/select,\"" + ObscuredPackageDeploymentService.LauncherPath + "\"",
-            UseShellExecute = true
-        });
     }
 
     private static void StyleTrayMenuItem(Forms.ToolStripItem item)
