@@ -16,6 +16,10 @@ internal static class ObscuredPackageDeploymentService
     private static readonly string[] ConfigurationFileNames = { "sorinkg.lua", "sorinxs.lua" };
     private const string DisabledConfigurationSuffix = ".disabled";
 
+    /// <summary>文件被占用时（G HUB / 游戏正在读）的重试次数与间隔。</summary>
+    private const int ConfigurationFileStateAttempts = 3;
+    private const int ConfigurationFileStateRetryDelayMilliseconds = 120;
+
     public static string LauncherPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), LauncherName);
     private static string LegacyLauncherPath => Path.Combine(Path.GetPathRoot(Environment.SystemDirectory)!, LauncherName);
 
@@ -71,15 +75,14 @@ internal static class ObscuredPackageDeploymentService
         }
     }
 
-    public static void RestoreRuntimeConfigurationFiles()
-    {
-        RenameRuntimeConfigurationFiles(disable: false);
-    }
+    /// <summary>恢复（启用）运行期配置文件，返回未能处理的文件名。</summary>
+    public static IReadOnlyList<string> RestoreRuntimeConfigurationFiles() => RenameRuntimeConfigurationFiles(disable: false);
 
-    public static void DisableRuntimeConfigurationFiles()
-    {
-        RenameRuntimeConfigurationFiles(disable: true);
-    }
+    /// <summary>
+    /// 禁用运行期配置文件，返回未能处理的文件名。
+    /// 关闭程序后这两个文件处于禁用状态，鼠标宏便无法再读取它们。
+    /// </summary>
+    public static IReadOnlyList<string> DisableRuntimeConfigurationFiles() => RenameRuntimeConfigurationFiles(disable: true);
 
     private static string GetOrCreateInstallDirectory()
     {
@@ -104,19 +107,67 @@ internal static class ObscuredPackageDeploymentService
         return Directory.Exists(directory) ? directory : null;
     }
 
-    private static void RenameRuntimeConfigurationFiles(bool disable)
+    private static IReadOnlyList<string> RenameRuntimeConfigurationFiles(bool disable)
     {
         var directory = TryGetInstallDirectory();
-        if (directory is null) return;
+        if (directory is null) return Array.Empty<string>();
 
+        var failures = new List<string>();
         foreach (var fileName in ConfigurationFileNames)
         {
             var activePath = Path.Combine(directory, fileName);
             var disabledPath = activePath + DisabledConfigurationSuffix;
-            var sourcePath = disable ? activePath : disabledPath;
-            var targetPath = disable ? disabledPath : activePath;
-            if (File.Exists(sourcePath) && !File.Exists(targetPath)) File.Move(sourcePath, targetPath);
+            if (!TryApplyConfigurationFileState(activePath, disabledPath, disable)) failures.Add(fileName);
         }
+
+        return failures;
+    }
+
+    /// <summary>
+    /// 把一对"活动 / 禁用"配置文件调整到目标状态，并清掉多余的那一份。
+    ///
+    /// 这里刻意不做成"目标不存在才改名"：那样一旦两份并存（例如部署时重新解压出活动文件、
+    /// 而旧的禁用副本还在），两个方向都会永远失效，禁用保护形同虚设。现在的规则是：
+    /// 活动文件始终是较新的那一份（编辑器与部署都写它），因此启用时以它为准、丢弃禁用副本；
+    /// 禁用时把活动文件改名为禁用副本。
+    ///
+    /// 返回 false 表示尝试若干次后仍然失败（通常是文件被 G HUB 或游戏占用）。
+    /// </summary>
+    internal static bool TryApplyConfigurationFileState(string activePath, string disabledPath, bool disable)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                ApplyConfigurationFileStateOnce(activePath, disabledPath, disable);
+                return true;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                if (attempt >= ConfigurationFileStateAttempts) return false;
+                Thread.Sleep(ConfigurationFileStateRetryDelayMilliseconds);
+            }
+        }
+    }
+
+    private static void ApplyConfigurationFileStateOnce(string activePath, string disabledPath, bool disable)
+    {
+        if (disable)
+        {
+            if (!File.Exists(activePath)) return; // 已经处于禁用状态
+            if (File.Exists(disabledPath)) File.Delete(disabledPath);
+            File.Move(activePath, disabledPath);
+            return;
+        }
+
+        if (File.Exists(activePath))
+        {
+            // 活动文件较新，保留它，只清掉可能残留的禁用副本
+            if (File.Exists(disabledPath)) File.Delete(disabledPath);
+            return;
+        }
+
+        if (File.Exists(disabledPath)) File.Move(disabledPath, activePath);
     }
 
     private static string GetInstallRecordPath()

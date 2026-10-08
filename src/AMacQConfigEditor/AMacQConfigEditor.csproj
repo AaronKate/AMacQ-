@@ -13,6 +13,10 @@
     <DefineConstants>$(DefineConstants);AUTHOR_EDITION</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <!-- 常驻回归测试需要访问 internal 的筛选规则、监听器与窗口契约。 -->
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>AMacQConfigEditor.Tests</_Parameter1>
+    </AssemblyAttribute>
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.Windows.Forms" />
     <EmbeddedResource Include="..\..\assets\AMacQ.ico" LogicalName="AMacQConfigEditor.Resources.AMacQ.ico" />

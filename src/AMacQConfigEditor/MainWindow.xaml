@@ -167,7 +167,9 @@
           <ControlTemplate TargetType="TextBox">
             <Border x:Name="TextBoxBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="5">
-              <ScrollViewer x:Name="PART_ContentHost" VerticalContentAlignment="Center" Margin="{TemplateBinding Padding}"/>
+              <!-- 这里不要再写 Margin="{TemplateBinding Padding}"：TextBox 自身已按 Padding 内缩内容，
+                   再叠加一次会让文字与光标偏右、垂直方向过窄时还会把字形裁成一条细缝。 -->
+              <ScrollViewer x:Name="PART_ContentHost" VerticalContentAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{DynamicResource ControlHoverBrush}"/></Trigger>
@@ -542,11 +544,23 @@
           <Grid Grid.Row="2">
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
               <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <TextBlock Text="枪械" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource SecondaryTextBrush}"
                        Margin="6,0,0,7"/>
-            <Border Grid.Row="1" BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="8" Background="Transparent">
+            <Grid Grid.Row="1" Margin="0,0,0,8">
+              <TextBox Name="WeaponSearchBox" Height="30" FontSize="13" Padding="10,2,10,2"
+                       Style="{StaticResource DarkTextBox}"
+                       BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1"
+                       VerticalContentAlignment="Center"/>
+              <TextBlock Name="WeaponSearchPlaceholder" Text="搜索枪械（中文名或代码）"
+                         FontSize="12" Foreground="{StaticResource SecondaryTextBrush}"
+                         Margin="11,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+              <TextBlock Name="WeaponSearchCount" FontSize="10" Foreground="{StaticResource SecondaryTextBrush}"
+                         Margin="0,0,11,0" HorizontalAlignment="Right" VerticalAlignment="Center" IsHitTestVisible="False"/>
+            </Grid>
+            <Border Grid.Row="2" BorderBrush="{DynamicResource PanelOutlineBrush}" BorderThickness="1" CornerRadius="8" Background="Transparent">
             <ListBox Name="WeaponList" BorderThickness="0" Background="Transparent"
                      FontSize="14" Foreground="{DynamicResource ListItemTextBrush}"/>
           </Border>

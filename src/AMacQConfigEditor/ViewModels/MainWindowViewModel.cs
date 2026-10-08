@@ -68,8 +68,8 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         _session = new ConfigurationSession(
             new ConfigFile(keyBindingsPath, keyBindings.Content, keyBindings.Encoding),
             new ConfigFile(sensitivityPath, sensitivity.Content, sensitivity.Encoding));
-        Press = LuaConfigService.GetNumber(_session.KeyBindings.Content, "press") ?? "3";
-        ModeSwitch = LuaConfigService.GetString(_session.KeyBindings.Content, "modeswitch") ?? "scrolllock";
+        Press = _session.KeyBindingsDocument.GetNumber("press") ?? "3";
+        ModeSwitch = _session.KeyBindingsDocument.GetString("modeswitch") ?? "scrolllock";
         OnPropertyChanged(nameof(Press));
         OnPropertyChanged(nameof(ModeSwitch));
         SelectedWeapon = Weapons.FirstOrDefault();
@@ -80,13 +80,43 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
     }
 
     public string GetBindingSummary(string weapon) =>
-        _session is null ? string.Empty : LuaConfigService.GetBindingSummary(_session.KeyBindings.Content, weapon);
+        _session is null ? string.Empty : _session.KeyBindingsDocument.GetBindingSummary(weapon);
 
     public string GetBindingValue(string weapon, string suffix) =>
-        _session is null ? "0" : LuaConfigService.GetNumber(_session.KeyBindings.Content, $"{weapon}_{suffix}") ?? "0";
+        _session?.KeyBindingsDocument.GetNumber($"{weapon}_{suffix}") ?? "0";
 
     public string GetSensitivityValue(string weapon, string suffix) =>
-        _session is null ? "0" : LuaConfigService.GetNumber(_session.Sensitivity.Content, $"{weapon}_{suffix}") ?? "0";
+        _session?.SensitivityDocument.GetNumber($"{weapon}_{suffix}") ?? "0";
+
+    /// <summary>枪械三条按键槽位在配置里对应的变量后缀。</summary>
+    public static string SuffixFor(WeaponBindingSlot slot) => slot switch
+    {
+        WeaponBindingSlot.Alt => "qq1156777787_second",
+        WeaponBindingSlot.Ctrl => "Third",
+        _ => "qq1156777787"
+    };
+
+    /// <summary>读取指定枪械某槽位的按键值，"0" 表示未绑定。</summary>
+    public string GetSlotBindingValue(string weapon, WeaponBindingSlot slot) =>
+        _session?.KeyBindingsDocument.GetNumber($"{weapon}_{SuffixFor(slot)}") ?? "0";
+
+    /// <summary>
+    /// 找出"同一槽位已被其它枪械占用"的枪名。用于在写入前提示用户绑定会被顶掉，
+    /// 而不是事后发现另一把枪进游戏没反应。写入值为 0 时不存在冲突。
+    /// </summary>
+    public string? FindBindingConflict(string weapon, WeaponBindingSlot slot, string value)
+    {
+        if (_session is null || value is "0" || string.IsNullOrWhiteSpace(value)) return null;
+
+        var suffix = SuffixFor(slot);
+        foreach (var name in _session.Weapons)
+        {
+            if (string.Equals(name, weapon, StringComparison.Ordinal)) continue;
+            if (_session.KeyBindingsDocument.GetNumber($"{name}_{suffix}") == value) return name;
+        }
+
+        return null;
+    }
 
     public void RefreshSelectedWeaponValues()
     {
@@ -102,14 +132,14 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         var axis = adjustX ? "X" : "Y";
         var baseSuffix = $"qq1156777787_{axis}";
         var baseName = $"{weapon}_{baseSuffix}";
-        var baseValue = LuaConfigService.GetNumber(_session.Sensitivity.Content, baseName);
+        var baseValue = _session.SensitivityDocument.GetNumber(baseName);
         if (baseValue is null)
             return SensitivityAdjustmentResult.Failure($"当前枪械缺少 {axis} 轴灵敏度配置，未进行修改。");
 
         var delta = direction > 0 ? step : -step;
         var newBaseValue = AdjustSensitivityBy(baseValue, delta);
-        var updatedContent = LuaConfigService.SetNumber(_session.Sensitivity.Content, baseName, newBaseValue);
-        _session.Sensitivity.Content = updatedContent;
+        _session.SensitivityDocument.SetNumber(baseName, newBaseValue);
+        _session.Sensitivity.Content = _session.SensitivityDocument.ApplyPendingChanges();
         ScheduleSensitivityWrite();
 
         if (adjustX)
@@ -132,7 +162,9 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         CancellationToken token;
         lock (_sensitivityWriteLock)
         {
+            // 先取消再释放：连续微调时每次都会新建 CTS，不释放会持续累积。
             _sensitivityWriteCancellation?.Cancel();
+            _sensitivityWriteCancellation?.Dispose();
             _sensitivityWriteCancellation = new CancellationTokenSource();
             token = _sensitivityWriteCancellation.Token;
         }
@@ -170,44 +202,80 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         lock (_sensitivityWriteLock)
         {
             _sensitivityWriteCancellation?.Cancel();
+            _sensitivityWriteCancellation?.Dispose();
             _sensitivityWriteCancellation = null;
             if (_session is null) return;
             AtomicFileWriter.WriteAllText(_session.Sensitivity.Path, _session.Sensitivity.Content, _session.Sensitivity.Encoding);
         }
     }
+
     public void Save()
     {
         if (_session is null || string.IsNullOrWhiteSpace(SelectedWeapon)) return;
-        ValidateKey(PrimaryKey); ValidateKey(AltKey); ValidateKey(CtrlKey);
-        ValidateDecimal(SensitivityX); ValidateDecimal(SensitivityY); ValidateDecimal(SensitivityAddX); ValidateDecimal(SensitivityAddY);
-        _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_qq1156777787", PrimaryKey);
-        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBinding(_session.KeyBindings.Content, SelectedWeapon!, "qq1156777787", PrimaryKey);
-        _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, "press", Press);
-        _session.KeyBindings.Content = LuaConfigService.SetString(_session.KeyBindings.Content, "modeswitch", ModeSwitch);
-        _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_qq1156777787_second", AltKey);
-        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBinding(_session.KeyBindings.Content, SelectedWeapon!, "qq1156777787_second", AltKey);
-        _session.KeyBindings.Content = LuaConfigService.SetNumber(_session.KeyBindings.Content, $"{SelectedWeapon}_Third", CtrlKey);
-        _session.KeyBindings.Content = LuaConfigService.ClearConflictingBinding(_session.KeyBindings.Content, SelectedWeapon!, "Third", CtrlKey);
-        _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_X", SensitivityX);
-        _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_Y", SensitivityY);
-        _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_add_X", SensitivityAddX);
-        _session.Sensitivity.Content = LuaConfigService.SetNumber(_session.Sensitivity.Content, $"{SelectedWeapon}_qq1156777787_add_Y", SensitivityAddY);
-        AtomicFileWriter.WriteAllText(_session.KeyBindings.Path, _session.KeyBindings.Content, _session.KeyBindings.Encoding);
+
+        // 写盘前校验：宁可在这里给出明确提示，也不要把非法值（尤其是空值）写进用户的配置文件。
+        ValidateKey(PrimaryKey, "无修饰键");
+        ValidateKey(AltKey, "按住 Alt");
+        ValidateKey(CtrlKey, "按住 Ctrl");
+        ValidateDecimal(SensitivityX, "灵敏度 X");
+        ValidateDecimal(SensitivityY, "灵敏度 Y");
+        ValidateDecimal(SensitivityAddX, "灵敏度 增幅 X");
+        ValidateDecimal(SensitivityAddY, "灵敏度 增幅 Y");
+
+        ApplySelectedWeaponValues();
         FlushPendingSensitivityWrite();
         StatusMessage = "应用成功。";
+    }
+
+    private static void ValidateKey(string? value, string label)
+    {
+        if (value is null || !Regex.IsMatch(value, "^[0-9]$"))
+            throw new InvalidOperationException($"「{label}」的按键值无效（当前为 {value ?? "空"}），请重新选择后再应用。");
+    }
+
+    private static void ValidateDecimal(string? value, string label)
+    {
+        if (value is null || !IsValidSensitivityValue(value))
+            throw new InvalidOperationException($"「{label}」的数值无效（当前为 {value ?? "空"}），请重新填写后再应用。");
+    }
+
+    /// <summary>
+    /// 把当前编辑框里的值写回内存中的配置文档并落盘。文档的写入缓冲会在一批修改后
+    /// 统一应用，因此这里只触发一次全文写回，避免逐字段写回的重复开销。
+    /// </summary>
+    private void ApplySelectedWeaponValues()
+    {
+        if (_session is null || string.IsNullOrWhiteSpace(SelectedWeapon)) return;
+
+        var keyBindings = _session.KeyBindingsDocument;
+        var sensitivity = _session.SensitivityDocument;
+        keyBindings.SetNumber($"{SelectedWeapon}_qq1156777787", PrimaryKey);
+        keyBindings.ClearConflictingBinding(SelectedWeapon!, "qq1156777787", PrimaryKey);
+        keyBindings.SetNumber("press", Press);
+        keyBindings.SetString("modeswitch", ModeSwitch);
+        keyBindings.SetNumber($"{SelectedWeapon}_qq1156777787_second", AltKey);
+        keyBindings.ClearConflictingBinding(SelectedWeapon!, "qq1156777787_second", AltKey);
+        keyBindings.SetNumber($"{SelectedWeapon}_Third", CtrlKey);
+        keyBindings.ClearConflictingBinding(SelectedWeapon!, "Third", CtrlKey);
+        sensitivity.SetNumber($"{SelectedWeapon}_qq1156777787_X", SensitivityX);
+        sensitivity.SetNumber($"{SelectedWeapon}_qq1156777787_Y", SensitivityY);
+        sensitivity.SetNumber($"{SelectedWeapon}_qq1156777787_add_X", SensitivityAddX);
+        sensitivity.SetNumber($"{SelectedWeapon}_qq1156777787_add_Y", SensitivityAddY);
+        _session.KeyBindings.Content = keyBindings.ApplyPendingChanges();
+        _session.Sensitivity.Content = sensitivity.ApplyPendingChanges();
+        AtomicFileWriter.WriteAllText(_session.KeyBindings.Path, _session.KeyBindings.Content, _session.KeyBindings.Encoding);
     }
 
     private void LoadSelectedWeaponValues()
     {
         if (_session is null || string.IsNullOrWhiteSpace(SelectedWeapon)) return;
-        PrimaryKey = Value(_session.KeyBindings.Content, "qq1156777787"); AltKey = Value(_session.KeyBindings.Content, "qq1156777787_second"); CtrlKey = Value(_session.KeyBindings.Content, "Third");
-        SensitivityX = Value(_session.Sensitivity.Content, "qq1156777787_X"); SensitivityY = Value(_session.Sensitivity.Content, "qq1156777787_Y");
-        SensitivityAddX = Value(_session.Sensitivity.Content, "qq1156777787_add_X"); SensitivityAddY = Value(_session.Sensitivity.Content, "qq1156777787_add_Y");
+        PrimaryKey = Value(_session.KeyBindingsDocument, "qq1156777787"); AltKey = Value(_session.KeyBindingsDocument, "qq1156777787_second"); CtrlKey = Value(_session.KeyBindingsDocument, "Third");
+        SensitivityX = Value(_session.SensitivityDocument, "qq1156777787_X"); SensitivityY = Value(_session.SensitivityDocument, "qq1156777787_Y");
+        SensitivityAddX = Value(_session.SensitivityDocument, "qq1156777787_add_X"); SensitivityAddY = Value(_session.SensitivityDocument, "qq1156777787_add_Y");
         foreach (var property in new[] { nameof(PrimaryKey), nameof(AltKey), nameof(CtrlKey), nameof(SensitivityX), nameof(SensitivityY), nameof(SensitivityAddX), nameof(SensitivityAddY) }) OnPropertyChanged(property);
     }
 
-    private string Value(string content, string suffix) => LuaConfigService.GetNumber(content, $"{SelectedWeapon}_{suffix}") ?? "0";
-    private static void ValidateKey(string value) { if (!Regex.IsMatch(value, "^[0-9]$")) throw new InvalidOperationException("按键值必须为 0 到 9。"); }
+    private string Value(LuaConfigService.LuaDocument document, string suffix) => document.GetNumber($"{SelectedWeapon}_{suffix}") ?? "0";
     public static bool IsValidSensitivityValue(string value) => Regex.IsMatch(value, "^\\d+(?:\\.\\d{1,2})?$");
     public static string AdjustSensitivityValue(string value, int direction)
     {
@@ -215,7 +283,6 @@ public sealed class MainWindowViewModel : INotifyPropertyChanged
         number = Math.Max(0m, Math.Round(number + (direction > 0 ? 0.01m : -0.01m), 2));
         return number.ToString("0.##", CultureInfo.InvariantCulture);
     }
-    private static void ValidateDecimal(string value) { if (!IsValidSensitivityValue(value)) throw new InvalidOperationException("灵敏度必须是非负整数或最多两位小数。"); }
     private static string AdjustSensitivityBy(string value, decimal delta)
     {
         if (!decimal.TryParse(value, NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number))

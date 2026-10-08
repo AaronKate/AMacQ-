@@ -20,7 +20,7 @@ using Forms = System.Windows.Forms;
 
 namespace AMacQConfigEditor;
 
-public partial class MainWindow : Window
+public partial class MainWindow : Window, IWeaponQuickSwitchHost
 {
     private readonly MainWindowViewModel _viewModel = new();
     private readonly SensitivityOverlayWindow _sensitivityOverlay = new();
@@ -28,7 +28,6 @@ public partial class MainWindow : Window
     private string? _keyBindingsPath;
     private string? _sensitivityPath;
     private readonly DispatcherTimer _saveResetTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
-    private readonly DispatcherTimer _weaponSearchTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private readonly DispatcherTimer _hotKeyNotificationTimer = new() { Interval = TimeSpan.FromMilliseconds(1500) };
     private readonly Forms.NotifyIcon _trayIcon = new();
     private const int WmHotKey = 0x0312;
@@ -37,6 +36,11 @@ public partial class MainWindow : Window
     private const uint ModNoRepeat = 0x4000;
     private const int VkControl = 0x11;
     private const int VkMenu = 0x12;
+    // 左右修饰键分开检测：按住任意一侧都应识别为对应的槽位。
+    private const int VirtualKeyControl = 0xA2;
+    private const int VirtualKeyRControl = 0xA3;
+    private const int VirtualKeyMenu = 0xA4;
+    private const int VirtualKeyRMenu = 0xA5;
     private const int HotKeyXDecrease = 1;
     private const int HotKeyXIncrease = 2;
     private const int HotKeyYDecrease = 3;
@@ -59,7 +63,25 @@ public partial class MainWindow : Window
     private HwndSource? _windowSource;
     private IntPtr _windowHandle;
     private readonly HashSet<int> _registeredHotKeys = [];
-    private string _weaponSearchPrefix = string.Empty;
+    private QuickSwitchWindow? _quickSwitchWindow;
+
+    /// <summary>后台等待按键绑定的最长时间；超时后静默取消，不打扰用户。</summary>
+    private static readonly TimeSpan BindingCaptureTimeout = TimeSpan.FromSeconds(15);
+
+    /// <summary>"等待按键…"提示的停留时长：只需让用户知道程序在监听，不必挂满整个等待窗口。</summary>
+    private static readonly TimeSpan BindingWaitingHintDuration = TimeSpan.FromSeconds(2.5);
+    private static readonly System.Windows.Media.Color BindingSuccessColor =
+        (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#FF5DD7FF")!;
+    private static readonly System.Windows.Media.Color BindingFailureColor =
+        (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#FFFFB45B")!;
+    private static readonly System.Windows.Media.Color BindingWaitingColor =
+        (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#FFB9CAE0")!;
+    private readonly DispatcherTimer _bindingCaptureTimer = new() { Interval = BindingCaptureTimeout };
+    private MouseSideButtonListener? _bindingCaptureMouse;
+    private DigitKeyListener? _bindingCaptureKeyboard;
+    private (string Weapon, WeaponBindingSlot Slot)? _bindingCaptureTarget;
+
+    private WeaponListItem[] _allWeaponItems = [];
     private string? _pendingHotKeyNotification;
     private Forms.ToolTipIcon _pendingHotKeyNotificationIcon = Forms.ToolTipIcon.Info;
     private IntPtr _trayOutsideClickHook;
@@ -101,7 +123,10 @@ public partial class MainWindow : Window
         SetWindowIcon();
         ConfigureTrayIcon();
         UpdateLicenseStatus();
-        ObscuredPackageDeploymentService.RestoreRuntimeConfigurationFiles();
+
+        // 启动时恢复（启用）配置文件：若上一次退出时被禁用，这里要改回来。
+        var restoreFailures = ObscuredPackageDeploymentService.RestoreRuntimeConfigurationFiles();
+        if (restoreFailures.Count > 0) WarnRuntimeConfigurationFailure(restoreFailures, disabling: false);
 
         DecompressBtn.Click += (_, _) =>
         {
@@ -131,211 +156,36 @@ public partial class MainWindow : Window
         Closing += (_, _) =>
         {
             _viewModel.FlushPendingSensitivityWrite();
-            ObscuredPackageDeploymentService.DisableRuntimeConfigurationFiles();
+
+            // 关闭后禁用配置文件，使鼠标宏无法再读取它们；失败必须让用户知道，否则保护形同虚设。
+            var disableFailures = ObscuredPackageDeploymentService.DisableRuntimeConfigurationFiles();
+            if (disableFailures.Count > 0) WarnRuntimeConfigurationFailure(disableFailures, disabling: true);
         };
         StateChanged += (_, _) => { if (WindowState == WindowState.Minimized) HideToTray(); };
         WeaponList.SelectionChanged += (_, _) => OnWeaponSelectionChanged();
-        WeaponList.PreviewTextInput += (_, args) => FindWeaponByPrefix(args);
         WeaponList.ItemContainerStyle = (Style)FindResource("WeaponListItem");
+        WeaponSearchBox.TextChanged += HandleWeaponSearchTextChanged;
+        WeaponSearchBox.PreviewKeyDown += HandleWeaponSearchKeyDown;
+        WeaponSearchBox.GotKeyboardFocus += FocusWeaponSearch;
+        WeaponSearchBox.LostKeyboardFocus += BlurWeaponSearch;
 
         BuildFieldCards();
         PopulateGlobalOptions();
         LoadDefaultFilesIfAvailable();
         _saveResetTimer.Tick += (_, _) => { SaveBtn.Content = "应用"; _saveResetTimer.Stop(); };
-        _weaponSearchTimer.Tick += (_, _) => { _weaponSearchPrefix = string.Empty; _weaponSearchTimer.Stop(); };
         _hotKeyNotificationTimer.Tick += (_, _) => FlushHotKeyNotification();
-    }
-
-    private void ConfigureTrayIcon()
-    {
-        using var iconStream = typeof(MainWindow).Assembly.GetManifestResourceStream("AMacQConfigEditor.Resources.AMacQ.ico");
-        if (iconStream is null)
-        {
-            _trayIcon.Icon = Drawing.SystemIcons.Application;
-        }
-        else
-        {
-            using var icon = new Drawing.Icon(iconStream);
-            _trayIcon.Icon = (Drawing.Icon)icon.Clone();
-        }
-        _trayIcon.Text = "AMacQ Configuration Editor";
-        _trayMenu.Renderer = new TrayMenuRenderer(this);
-        ApplyTrayMenuCornerRadius(_trayMenu);
-        _trayMenu.ShowImageMargin = false;
-        _trayMenu.ShowCheckMargin = true;
-        _trayMenu.Font = new Drawing.Font("Segoe UI", 11F);
-        _trayMenu.ItemAdded += (_, args) => StyleTrayMenuItem(args.Item);
-        _trayMenu.Items.Add("打开主窗口", null, (_, _) =>
-        {
-            _trayMenu.Close();
-            RestoreFromTray();
-        });
-        _trayCurrentWeaponStatus = new Forms.ToolStripMenuItem { Enabled = false };
-        _trayMenu.Items.Add(_trayCurrentWeaponStatus);
-        _traySensitivityStatus = new Forms.ToolStripMenuItem
-        {
-            DropDownDirection = TraySubMenuDirection,
-            ToolTipText = "点击展开，每次调整 0.05 并自动保存"
-        };
-        ConfigureTrayDropDown(_traySensitivityStatus.DropDown);
-        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("X −0.05", true, -1, 0.05m));
-        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("X +0.05", true, 1, 0.05m));
-        _traySensitivityStatus.DropDownItems.Add(new Forms.ToolStripSeparator());
-        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("Y −0.05", false, -1, 0.05m));
-        _traySensitivityStatus.DropDownItems.Add(CreateTraySensitivityMenuItem("Y +0.05", false, 1, 0.05m));
-        _trayMenu.Items.Add(_traySensitivityStatus);
-        _trayMenu.Items.Add(new Forms.ToolStripSeparator());
-        _trayMenu.Items.Add("退出", null, (_, _) => Close());
-        _trayIcon.ContextMenuStrip = _trayMenu;
-        _trayIcon.DoubleClick += (_, _) => RestoreFromTray();
-        _trayMenu.Opening += (_, _) =>
-        {
-            RefreshTrayWeaponMenuIfNeeded();
-            StartTrayOutsideClickWatcher();
-        };
-        _trayMenu.Closed += (_, _) => StopTrayOutsideClickWatcher();
-        Closed += (_, _) => StopTrayOutsideClickWatcher();
-        _trayMenu.Closing += HandleTrayMenuClosing;
-        _trayIcon.Visible = true;
-    }
-
-    private void InitializeGlobalHotKeys()
-    {
-        _windowHandle = new WindowInteropHelper(this).Handle;
-        _windowSource = HwndSource.FromHwnd(_windowHandle);
-        _windowSource?.AddHook(HandleWindowMessage);
-
-        RegisterGlobalHotKey(HotKeyXDecrease, 0x25, "Ctrl + Alt + 左方向键");
-        RegisterGlobalHotKey(HotKeyXIncrease, 0x27, "Ctrl + Alt + 右方向键");
-        RegisterGlobalHotKey(HotKeyYDecrease, 0x28, "Ctrl + Alt + 下方向键");
-        RegisterGlobalHotKey(HotKeyYIncrease, 0x26, "Ctrl + Alt + 上方向键");
-        RegisterGlobalHotKey(HotKeyWeaponMenu, 0x4D, "Ctrl + Alt + M");
-        RegisterGlobalHotKey(HotKeyYFastDecrease, 0xBD, "Ctrl + Alt + -");
-        RegisterGlobalHotKey(HotKeyYFastIncrease, 0xBB, "Ctrl + Alt + =");
-    }
-
-    private static bool IsPressed(int virtualKey) => (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
-
-    private static bool IsControlAltModifierCombo() =>
-        IsPressed(VkControl) && IsPressed(VkMenu);
-
-    private void RegisterGlobalHotKey(int id, uint virtualKey, string shortcut)
-    {
-        if (RegisterHotKey(_windowHandle, id, ModControl | ModAlt | ModNoRepeat, virtualKey))
-        {
-            _registeredHotKeys.Add(id);
-            return;
-        }
-
-        _trayIcon.ShowBalloonTip(3000, "AMacQ", $"快捷键 {shortcut} 注册失败，可能已被其他程序占用。", Forms.ToolTipIcon.Warning);
-    }
-
-    private IntPtr HandleWindowMessage(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
-    {
-        if (message != WmHotKey) return IntPtr.Zero;
-
-        var id = wParam.ToInt32();
-        if (!_registeredHotKeys.Contains(id)) return IntPtr.Zero;
-
-        handled = true;
-        if (!IsControlAltModifierCombo()) return IntPtr.Zero;
-
-        if (id is HotKeyYFastDecrease or HotKeyYFastIncrease)
-        {
-            ApplyHotKeyAdjustment(false, id == HotKeyYFastIncrease ? 1 : -1, 0.05m);
-            return IntPtr.Zero;
-        }
-
-        var adjustment = id switch
-        {
-            HotKeyXDecrease => (AdjustX: true, Direction: -1),
-            HotKeyXIncrease => (AdjustX: true, Direction: 1),
-            HotKeyYDecrease => (AdjustX: false, Direction: -1),
-            HotKeyYIncrease => (AdjustX: false, Direction: 1),
-            _ => (AdjustX: true, Direction: 0)
-        };
-        if (id == HotKeyWeaponMenu)
-        {
-            ShowWeaponMenuFromHotKey();
-            return IntPtr.Zero;
-        }
-
-        if (adjustment.Direction != 0) ApplyHotKeyAdjustment(adjustment.AdjustX, adjustment.Direction);
-        return IntPtr.Zero;
-    }
-
-    private void ShowWeaponMenuFromHotKey()
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            RefreshTrayWeaponMenuIfNeeded();
-            if (_trayMenu.Visible)
-            {
-                _trayMenu.Close();
-                return;
-            }
-
-            _trayMenu.Show(Forms.Cursor.Position);
-            StartTrayOutsideClickWatcher();
-        }));
-    }
-
-    private void ApplyHotKeyAdjustment(bool adjustX, int direction, decimal step = 0.01m)
-    {
-        var result = _viewModel.AdjustCurrentWeaponSensitivity(adjustX, direction, step);
-        if (!result.IsSuccess)
-        {
-            QueueHotKeyNotification(result.Error ?? "当前枪械灵敏度调整失败。", Forms.ToolTipIcon.Warning);
-            return;
-        }
-
-        // 托盘菜单第一层的灵敏度状态会实时刷新，无需在每次微调后重建整棵枪械菜单。
-        ShowSensitivityOverlay();
-    }
-
-    private void QueueHotKeyNotification(string message, Forms.ToolTipIcon icon)
-    {
-        _pendingHotKeyNotification = message;
-        _pendingHotKeyNotificationIcon = icon;
-        _hotKeyNotificationTimer.Stop();
-        _hotKeyNotificationTimer.Start();
-    }
-
-    private void FlushHotKeyNotification()
-    {
-        _hotKeyNotificationTimer.Stop();
-        if (string.IsNullOrWhiteSpace(_pendingHotKeyNotification)) return;
-
-        _trayIcon.ShowBalloonTip(2000, "AMacQ", _pendingHotKeyNotification, _pendingHotKeyNotificationIcon);
-        _pendingHotKeyNotification = null;
-    }
-
-    private void UnregisterGlobalHotKeys()
-    {
-        if (_windowHandle == IntPtr.Zero) return;
-        foreach (var id in _registeredHotKeys) UnregisterHotKey(_windowHandle, id);
-        _registeredHotKeys.Clear();
-        _windowSource?.RemoveHook(HandleWindowMessage);
-        _windowSource = null;
-        _windowHandle = IntPtr.Zero;
-    }
-
-    private void HideToTray()
-    {
-        Hide();
-    }
-
-    private void RestoreFromTray()
-    {
-        Show();
-        WindowState = WindowState.Normal;
-        Activate();
     }
 
     protected override void OnClosed(EventArgs eventArgs)
     {
         _hotKeyNotificationTimer.Stop();
         UnregisterGlobalHotKeys();
+        if (_quickSwitchWindow is not null)
+        {
+            _quickSwitchWindow.Close();
+            _quickSwitchWindow = null;
+        }
+        CancelBindingCapture();
         _sensitivityOverlay.CloseOverlay();
         _trayMenu.Dispose();
         _trayIcon.Visible = false;
@@ -343,8 +193,7 @@ public partial class MainWindow : Window
         base.OnClosed(eventArgs);
     }
 
-    private void UpdateLicenseStatus()
-    {
+    private void UpdateLicenseStatus()    {
         var licenseJson = LicenseStore.Load();
         var license = string.IsNullOrWhiteSpace(licenseJson) ? null : LicenseDocument.FromJson(licenseJson!);
         LicenseStatusText.Text = license?.Mode == "expires" && license.ExpiresUtc is { } expiresUtc
@@ -421,559 +270,25 @@ public partial class MainWindow : Window
         DownloadConfirmOverlay.Visibility = Visibility.Visible;
     }
 
-    private static void StyleTrayMenuItem(Forms.ToolStripItem item)
+    /// <summary>
+    /// 配置文件改名失败时的提示。
+    ///
+    /// 禁用失败意味着关闭程序后鼠标宏仍可能可用（保护失效），必须用模态框明确告知；
+    /// 恢复失败只在托盘气泡里提示，避免启动阶段弹窗打断用户。
+    /// </summary>
+    private void WarnRuntimeConfigurationFailure(IReadOnlyList<string> fileNames, bool disabling)
     {
-        if (item is Forms.ToolStripMenuItem menuItem)
+        var files = string.Join("、", fileNames);
+        if (disabling)
         {
-            menuItem.Padding = new Forms.Padding(10, 5, 10, 5);
-        }
-    }
-
-    private void ConfigureTrayDropDown(Forms.ToolStripDropDown dropDown)
-    {
-        // 同一实例只配置一次，避免每次重建都对常驻下拉菜单重复订阅 ItemAdded 等事件。
-        if (!_configuredTrayMenus.Add(dropDown)) return;
-
-        dropDown.Renderer = new TrayMenuRenderer(this);
-        dropDown.Font = new Drawing.Font("Segoe UI", 11F);
-        dropDown.ItemAdded += (_, args) => StyleTrayMenuItem(args.Item);
-        dropDown.Closing += HandleTrayMenuClosing;
-        if (dropDown is Forms.ToolStripDropDownMenu menu)
-        {
-            menu.ShowImageMargin = false;
-            menu.ShowCheckMargin = true;
-            menu.AutoSize = true;
-        }
-        ApplyTrayMenuCornerRadius(dropDown);
-    }
-
-    private void ApplyTrayMenuCornerRadius(Forms.ToolStripDropDown dropDown)
-    {
-        if (!_roundedTrayMenus.Add(dropDown)) return;
-
-        dropDown.SizeChanged += (_, _) => UpdateTrayMenuRegion(dropDown);
-        dropDown.Opened += (_, _) => UpdateTrayMenuRegion(dropDown);
-        dropDown.Disposed += (_, _) =>
-        {
-            _roundedTrayMenus.Remove(dropDown);
-            _configuredTrayMenus.Remove(dropDown);
-        };
-    }
-
-    private static void UpdateTrayMenuRegion(Forms.ToolStripDropDown dropDown)
-    {
-        if (dropDown.Width <= 0 || dropDown.Height <= 0) return;
-        using var path = CreateRoundedRectanglePath(new Drawing.Rectangle(0, 0, dropDown.Width, dropDown.Height), TrayMenuCornerRadius);
-        dropDown.Region = new Drawing.Region(path);
-    }
-
-    private static Drawing.Drawing2D.GraphicsPath CreateRoundedRectanglePath(Drawing.Rectangle bounds, int radius)
-    {
-        var path = new Drawing.Drawing2D.GraphicsPath();
-        var diameter = radius * 2;
-        path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
-        path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
-        path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
-        path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
-        path.CloseFigure();
-        return path;
-    }
-
-    private void RefreshTrayWeaponMenuIfNeeded()
-    {
-        UpdateTrayCurrentWeaponStatus();
-        if (!_trayMenuDirty) return;
-
-        _trayMenuDirty = false;
-        RefreshTrayWeaponMenu();
-    }
-
-    private void MarkTrayWeaponMenuDirty() => _trayMenuDirty = true;
-
-    private void RefreshTrayWeaponMenu()
-    {
-        UpdateTrayCurrentWeaponStatus();
-
-        // 重建前先递归释放整棵旧菜单树：若只 Clear 而不 Dispose，被换掉的菜单项及其
-        // 子 DropDown、字体、渲染器会因 _roundedTrayMenus 等集合的强引用而无法回收，
-        // 每切换一次枪械或调整一次灵敏度都会遗留一批，导致内存持续增长。
-        foreach (var item in _trayWeaponMenuItems)
-        {
-            if (item is Forms.ToolStripDropDownItem { DropDownItems.Count: > 0 } dropDownItem)
-            {
-                DisposeMenuItems(dropDownItem.DropDownItems);
-            }
-            item.Dispose();
-        }
-        _trayWeaponMenuItems.Clear();
-
-        if (_viewModel.Weapons.Count == 0)
-        {
-            AddTrayWeaponMenuItem(new Forms.ToolStripMenuItem("尚未加载配置") { Enabled = false });
+            MessageBox.Show(
+                $"无法禁用配置文件：{files}。\n可能正被罗技 G HUB 或游戏占用。\n关闭程序后鼠标宏仍可能可用，请关闭 G HUB 后重试。",
+                "禁用失败", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var categoryOrder = new[] { "突击步枪", "冲锋枪", "轻机枪", "射手步枪", "狙击步枪", "霰弹枪", "手枪", "其他" };
-        var groupedWeapons = _viewModel.Weapons
-            .GroupBy(GetWeaponCategory)
-            .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.Ordinal);
-
-        foreach (var category in categoryOrder)
-        {
-            if (!groupedWeapons.TryGetValue(category, out var weapons) || weapons.Length == 0) continue;
-
-            var categoryMenu = new Forms.ToolStripMenuItem(category);
-            categoryMenu.DropDownDirection = TraySubMenuDirection;
-            ConfigureTrayDropDown(categoryMenu.DropDown);
-            foreach (var weapon in weapons)
-            {
-                var weaponMenu = new Forms.ToolStripMenuItem(GetWeaponDisplayName(weapon))
-                {
-                    Checked = string.Equals(_viewModel.SelectedWeapon, weapon, StringComparison.Ordinal),
-                    DropDownDirection = TraySubMenuDirection
-                };
-                ConfigureTrayDropDown(weaponMenu.DropDown);
-                weaponMenu.DropDownItems.Add(new Forms.ToolStripMenuItem("仅选择此枪械", null, (_, _) =>
-                {
-                    SelectWeaponFromTray(weapon);
-                    _trayMenu.Close();
-                }));
-                weaponMenu.DropDownItems.Add(new Forms.ToolStripSeparator());
-                AddTrayBindingMenu(weaponMenu, weapon, "无修饰键", "qq1156777787", nameof(MainWindowViewModel.PrimaryKey));
-                AddTrayBindingMenu(weaponMenu, weapon, "按住 Alt", "qq1156777787_second", nameof(MainWindowViewModel.AltKey));
-                AddTrayBindingMenu(weaponMenu, weapon, "按住 Ctrl", "Third", nameof(MainWindowViewModel.CtrlKey));
-                categoryMenu.DropDownItems.Add(weaponMenu);
-            }
-            AddTrayWeaponMenuItem(categoryMenu);
-        }
+        _trayIcon.ShowBalloonTip(3000, "AMacQ", $"无法恢复配置文件：{files}，可能正被其他程序占用。", Forms.ToolTipIcon.Warning);
     }
-
-    private void AddTrayWeaponMenuItem(Forms.ToolStripItem item)
-    {
-        var separatorIndex = _trayMenu.Items
-            .Cast<Forms.ToolStripItem>()
-            .ToList()
-            .FindIndex(candidate => candidate is Forms.ToolStripSeparator);
-        if (separatorIndex < 0) separatorIndex = _trayMenu.Items.Count;
-
-        _trayMenu.Items.Insert(separatorIndex, item);
-        _trayWeaponMenuItems.Add(item);
-    }
-
-    private Forms.ToolStripMenuItem CreateTraySensitivityMenuItem(string text, bool adjustX, int direction, decimal step)
-    {
-        var item = new Forms.ToolStripMenuItem(text, null, (_, _) => KeepTrayMenuOpenForSensitivityAdjustment(adjustX, direction, step));
-        // WinForms raises the menu's Closing event before the item's Click callback.
-        // Arm the guard on MouseDown so the automatic ItemClicked close can be cancelled.
-        item.MouseDown += (_, _) => _keepTrayMenuOpenForSensitivity = true;
-        item.MouseUp += (_, _) => ResetTraySensitivityMenuGuard();
-        return item;
-    }
-
-    private void KeepTrayMenuOpenForSensitivityAdjustment(bool adjustX, int direction, decimal step)
-    {
-        _keepTrayMenuOpenForSensitivity = true;
-        AdjustTraySensitivity(adjustX, direction, step);
-        ResetTraySensitivityMenuGuard();
-    }
-
-    private void ResetTraySensitivityMenuGuard()
-    {
-        Dispatcher.BeginInvoke(new Action(() => _keepTrayMenuOpenForSensitivity = false), DispatcherPriority.Background);
-    }
-
-    private void AdjustTraySensitivity(bool adjustX, int direction, decimal step)
-    {
-        if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon))
-        {
-            _trayIcon.ShowBalloonTip(2000, "AMacQ", "请先选择枪械。", Forms.ToolTipIcon.Warning);
-            return;
-        }
-
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            var result = _viewModel.AdjustCurrentWeaponSensitivity(adjustX, direction, step);
-            if (!result.IsSuccess)
-            {
-                _trayIcon.ShowBalloonTip(2000, "AMacQ", result.Error ?? "当前枪械灵敏度调整失败。", Forms.ToolTipIcon.Warning);
-                return;
-            }
-
-            // 保存由 ViewModel 统一延迟处理：连续调整会不断取消上一次任务，
-            // 仅在停止操作后写入一次，避免快速点击造成频繁磁盘写入。
-            _viewModel.RefreshSelectedWeaponValues();
-            UpdateTrayCurrentWeaponStatus();
-        }));
-    }
-
-    private void HandleTrayMenuClosing(object? sender, Forms.ToolStripDropDownClosingEventArgs e)
-    {
-        if (!_keepTrayMenuOpenForSensitivity) return;
-        if (e.CloseReason is Forms.ToolStripDropDownCloseReason.ItemClicked or Forms.ToolStripDropDownCloseReason.AppClicked)
-        {
-            e.Cancel = true;
-        }
-    }
-
-    private void StartTrayOutsideClickWatcher()
-    {
-        if (_trayOutsideClickHook != IntPtr.Zero) return;
-        _trayOutsideClickHookProc ??= OnTrayOutsideClickEvent;
-        _trayOutsideClickHook = SetWinEventHook(EventSystemCaptureStart, EventSystemCaptureStart, IntPtr.Zero, _trayOutsideClickHookProc, 0, 0, WineventOutOfContext);
-    }
-
-    private void StopTrayOutsideClickWatcher()
-    {
-        if (_trayOutsideClickHook == IntPtr.Zero) return;
-        UnhookWinEvent(_trayOutsideClickHook);
-        _trayOutsideClickHook = IntPtr.Zero;
-    }
-
-    private void OnTrayOutsideClickEvent(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
-    {
-        if (!_trayMenu.Visible) return;
-
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            if (!_trayMenu.Visible) return;
-            if (_keepTrayMenuOpenForSensitivity) return;
-            if (IsPointOverTrayMenu(Forms.Control.MousePosition)) return;
-            _trayMenu.Close();
-        }));
-    }
-
-    private bool IsPointOverTrayMenu(Drawing.Point screenPoint)
-    {
-        var window = WindowFromPoint(screenPoint);
-        if (window == IntPtr.Zero) return false;
-        var root = GetAncestor(window, GaRoot);
-        if (root == IntPtr.Zero) root = window;
-        return IsTrayMenuHandle(root);
-    }
-
-    private bool IsTrayMenuHandle(IntPtr handle)
-    {
-        if (_trayMenu.IsHandleCreated && _trayMenu.Handle == handle) return true;
-        return IsDropDownHandle(_trayMenu.Items, handle);
-    }
-
-    private static bool IsDropDownHandle(Forms.ToolStripItemCollection items, IntPtr handle)
-    {
-        foreach (Forms.ToolStripItem item in items)
-        {
-            if (item is not Forms.ToolStripDropDownItem dropDownItem) continue;
-            if (dropDownItem.DropDown.Visible && dropDownItem.DropDown.IsHandleCreated && dropDownItem.DropDown.Handle == handle) return true;
-            if (IsDropDownHandle(dropDownItem.DropDownItems, handle)) return true;
-        }
-
-        return false;
-    }
-
-
-    private void UpdateTrayCurrentWeaponStatus()
-    {
-        if (_trayCurrentWeaponStatus is null) return;
-        var weapon = string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon) ? "未选择" : GetWeaponDisplayName(_viewModel.SelectedWeapon);
-        _trayCurrentWeaponStatus.Text = $"枪械：{weapon}";
-        if (_traySensitivityStatus is null) return;
-        if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon))
-        {
-            _traySensitivityStatus.Text = "灵敏度：—";
-            return;
-        }
-        var currentWeapon = _viewModel.SelectedWeapon!;
-        var sensitivityX = _viewModel.GetSensitivityValue(currentWeapon, "qq1156777787_X");
-        var sensitivityY = _viewModel.GetSensitivityValue(currentWeapon, "qq1156777787_Y");
-        _traySensitivityStatus.Text = $"灵敏度：X {sensitivityX} / Y {sensitivityY}";
-    }
-
-    private static void DisposeMenuItems(Forms.ToolStripItemCollection items)
-    {
-        // ToolStripItem.Dispose 会将其从父集合移除，因此从末尾向前逐个释放即可遍历完整棵树。
-        for (var index = items.Count - 1; index >= 0; index--)
-        {
-            if (items[index] is Forms.ToolStripDropDownItem { DropDownItems.Count: > 0 } dropDownItem)
-            {
-                DisposeMenuItems(dropDownItem.DropDownItems);
-            }
-            items[index].Dispose();
-        }
-    }
-
-    private static string GetWeaponCategory(string weapon) => weapon switch
-    {
-        "AK12" or "AKM" or "AR57" or "ASVAL" or "ASH" or "AUG" or "M7" or "CAR15" or "G3" or "K416" or "K437" or "KC17" or "M4A1" or "MCX" or "MDR" or "MK47" or "PTR32" or "QBZ" or "RM277" or "SCAR" or "SG552" or "TJ191" => "突击步枪",
-        "MK4" or "MP5" or "MP7" or "QCQ17" or "SR3M" or "TOM" or "UZI" or "Vector" or "YeNiu" => "冲锋枪",
-        "M250" or "PKM" or "QJB201" => "轻机枪",
-        "M14" or "SVCH" => "射手步枪",
-        _ => "其他"
-    };
-
-    private static string GetWeaponDisplayName(string? weapon) => WeaponNameMapper.GetDisplayName(weapon);
-
-    private void AddTrayBindingMenu(Forms.ToolStripMenuItem weaponMenu, string weapon, string label, string suffix, string propertyName)
-    {
-        var bindingMenu = new Forms.ToolStripMenuItem(label)
-        {
-            DropDownDirection = TraySubMenuDirection
-        };
-        ConfigureTrayDropDown(bindingMenu.DropDown);
-        var currentValue = _viewModel.GetBindingValue(weapon, suffix);
-        foreach (var option in KeyOptionsFor(MouseModelList.SelectedValue?.ToString(), currentValue))
-        {
-            var optionMenu = new Forms.ToolStripMenuItem(option.Text)
-            {
-                Checked = option.Value == currentValue,
-                CheckOnClick = false
-            };
-            optionMenu.Click += (_, _) =>
-            {
-                ApplyTrayBinding(weapon, propertyName, option.Value ?? "0");
-                _trayMenu.Close();
-            };
-            bindingMenu.DropDownItems.Add(optionMenu);
-        }
-        weaponMenu.DropDownItems.Add(bindingMenu);
-    }
-
-    private void SelectWeaponFromTray(string weapon)
-    {
-        Dispatcher.BeginInvoke(new Action(() => SelectWeaponFromTrayOnUiThread(weapon)));
-    }
-
-    private void SelectWeaponFromTrayOnUiThread(string weapon)
-    {
-        var item = WeaponList.Items.OfType<WeaponListItem>().FirstOrDefault(candidate => candidate.Name == weapon);
-        if (item is null) return;
-
-        if (ReferenceEquals(WeaponList.SelectedItem, item)) SelectWeapon();
-        else WeaponList.SelectedItem = item;
-
-        MarkTrayWeaponMenuDirty();
-    }
-
-    private void ApplyTrayBinding(string weapon, string propertyName, string value)
-    {
-        Dispatcher.BeginInvoke(new Action(() =>
-        {
-            SelectWeaponFromTrayOnUiThread(weapon);
-            switch (propertyName)
-            {
-                case nameof(MainWindowViewModel.PrimaryKey):
-                    _viewModel.PrimaryKey = value;
-                    break;
-                case nameof(MainWindowViewModel.AltKey):
-                    _viewModel.AltKey = value;
-                    break;
-                case nameof(MainWindowViewModel.CtrlKey):
-                    _viewModel.CtrlKey = value;
-                    break;
-            }
-            SaveChanges();
-            _viewModel.RefreshSelectedWeaponValues();
-        }));
-    }
-
-    private void LoadDefaultFilesIfAvailable()
-    {
-        _keyBindingsPath = ObscuredPackageDeploymentService.GetInstalledConfigurationPath("sorinkg.lua");
-        _sensitivityPath = ObscuredPackageDeploymentService.GetInstalledConfigurationPath("sorinxs.lua");
-        if (_keyBindingsPath is not null && _sensitivityPath is not null) LoadFiles();
-        else MarkTrayWeaponMenuDirty();
-    }
-
-    private void LoadFiles()
-    {
-        var result = _viewModel.Load(_keyBindingsPath!, _sensitivityPath!);
-        if (!result.IsSuccess)
-        {
-            MessageBox.Show(result.Error, "加载失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        RefreshWeaponList();
-        MarkTrayWeaponMenuDirty();
-    }
-
-    private void RefreshWeaponList(string? selectedWeapon = null)
-    {
-        selectedWeapon ??= (WeaponList.SelectedItem as WeaponListItem)?.Name;
-        var weapons = _viewModel.Weapons.Select(name => new WeaponListItem(name, _viewModel.GetBindingSummary(name))).ToArray();
-        WeaponList.ItemsSource = weapons;
-        WeaponList.SelectedItem = weapons.FirstOrDefault(weapon => weapon.Name == selectedWeapon) ?? weapons.FirstOrDefault();
-        SaveBtn.IsEnabled = weapons.Length > 0;
-    }
-
-    private void SelectWeapon()
-    {
-        if (WeaponList.SelectedItem is not WeaponListItem weapon) return;
-        _viewModel.SelectedWeapon = weapon.Name;
-        RefreshKeyOptions();
-        SelectedLabel.Text = "当前枪械：";
-        SelectedWeaponLabel.Text = weapon.DisplayName;
-        UpdateTrayCurrentWeaponStatus();
-    }
-
-    private void OnWeaponSelectionChanged()
-    {
-        // 主窗口选中项变化本身不触发托盘菜单重建：
-        // 托盘菜单在用户打开时按需刷新（ShowWeaponMenuFromHotKey / 左键打开托盘），
-        // 避免一次保存流程触发多次重建。
-        if (WeaponList.SelectedItem is WeaponListItem)
-        {
-            SelectWeapon();
-            MarkTrayWeaponMenuDirty();
-        }
-    }
-
-    private void FindWeaponByPrefix(TextCompositionEventArgs args)
-    {
-        if (string.IsNullOrWhiteSpace(args.Text)) return;
-
-        _weaponSearchPrefix += args.Text;
-        var matchedWeapon = WeaponList.Items.OfType<WeaponListItem>()
-            .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase) || weapon.DisplayName.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
-        if (matchedWeapon is null)
-        {
-            _weaponSearchPrefix = args.Text;
-            matchedWeapon = WeaponList.Items.OfType<WeaponListItem>()
-                .FirstOrDefault(weapon => weapon.Name.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase) || weapon.DisplayName.StartsWith(_weaponSearchPrefix, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (matchedWeapon is not null)
-        {
-            WeaponList.SelectedItem = matchedWeapon;
-            WeaponList.ScrollIntoView(matchedWeapon);
-        }
-
-        _weaponSearchTimer.Stop();
-        _weaponSearchTimer.Start();
-        args.Handled = true;
-    }
-
-    private void BuildFieldCards()
-    {
-        FieldCards.Children.Clear();
-        FieldCards.Children.Add(BuildFieldSection("按键", [
-            ("无修饰键", nameof(MainWindowViewModel.PrimaryKey)),
-            ("按住 Alt", nameof(MainWindowViewModel.AltKey)),
-            ("按住 Ctrl", nameof(MainWindowViewModel.CtrlKey))]));
-        FieldCards.Children.Add(BuildFieldSection("灵敏度", [
-            ("灵敏度 X", nameof(MainWindowViewModel.SensitivityX)),
-            ("灵敏度 Y", nameof(MainWindowViewModel.SensitivityY)),
-            ("灵敏度 增幅 X", nameof(MainWindowViewModel.SensitivityAddX)),
-            ("灵敏度 增幅 Y", nameof(MainWindowViewModel.SensitivityAddY))]));
-    }
-
-    private StackPanel BuildFieldSection(string title, (string Label, string Property)[] fields)
-    {
-        var section = new StackPanel { Margin = new Thickness(title == "按键" ? 0 : 8, 0, title == "按键" ? 8 : 0, 0) };
-        section.Children.Add(new TextBlock { Text = title, FontSize = 12, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8), Foreground = (System.Windows.Media.Brush)FindResource("SecondaryTextBrush") });
-        var list = new StackPanel();
-        var outer = new Border { Background = (System.Windows.Media.Brush)FindResource("PanelSurfaceBrush"), BorderBrush = (System.Windows.Media.Brush)FindResource("ControlBorderBrush"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(10), Child = list };
-        section.Children.Add(outer);
-        foreach (var field in fields)
-        {
-            var row = new Grid { Height = 44 };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
-            var label = new TextBlock { Text = field.Label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(14, 0, 8, 0), Foreground = (System.Windows.Media.Brush)FindResource("BodyTextBrush") };
-            row.Children.Add(label);
-            var isKeyField = field.Property is nameof(MainWindowViewModel.PrimaryKey) or nameof(MainWindowViewModel.AltKey) or nameof(MainWindowViewModel.CtrlKey);
-            Control input;
-            if (isKeyField)
-            {
-                var combo = new ComboBox { Height = 30, Width = 140, FontSize = 13, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 10, 0), Style = (Style)FindResource("DarkComboBox"), DisplayMemberPath = nameof(KeyOption.Text), SelectedValuePath = nameof(KeyOption.Value), ItemsSource = KeyOptions };
-                combo.SetBinding(ComboBox.SelectedValueProperty, new Binding(field.Property) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-                input = combo;
-            }
-            else
-            {
-                var text = new TextBox { Height = 30, Width = 140, Padding = new Thickness(8, 2, 8, 2), FontSize = 13, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 10, 0), Style = (Style)FindResource("DarkTextBox") };
-                text.SetBinding(TextBox.TextProperty, new Binding(field.Property) { Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged });
-                text.PreviewTextInput += ValidateSensitivityTextInput;
-                text.PreviewKeyDown += AdjustSensitivityWithArrowKeys;
-                DataObject.AddPastingHandler(text, ValidateSensitivityPaste);
-                input = text;
-            }
-            Grid.SetColumn(input, 1);
-            row.Children.Add(input);
-            _fieldInputs[field.Property] = input;
-            list.Children.Add(row);
-        }
-        return section;
-    }
-
-    private void PopulateGlobalOptions()
-    {
-        PressList.DisplayMemberPath = nameof(SelectionOption.Text); PressList.SelectedValuePath = nameof(SelectionOption.Value);
-        PressList.ItemsSource = new[] { new SelectionOption("鼠标左键", "1"), new SelectionOption("按住右键 + 鼠标左键", "3") };
-        PressList.SetBinding(ComboBox.SelectedValueProperty, new Binding(nameof(MainWindowViewModel.Press)) { Mode = BindingMode.TwoWay });
-        ModeSwitchList.DisplayMemberPath = nameof(SelectionOption.Text); ModeSwitchList.SelectedValuePath = nameof(SelectionOption.Value);
-        ModeSwitchList.ItemsSource = new[] { new SelectionOption("Scroll Lock", "scrolllock"), new SelectionOption("Caps Lock", "capslock"), new SelectionOption("Num Lock", "numlock") };
-        ModeSwitchList.SetBinding(ComboBox.SelectedValueProperty, new Binding(nameof(MainWindowViewModel.ModeSwitch)) { Mode = BindingMode.TwoWay });
-        MouseModelList.DisplayMemberPath = nameof(SelectionOption.Text); MouseModelList.SelectedValuePath = nameof(SelectionOption.Value);
-        MouseModelList.ItemsSource = new[] { new SelectionOption("通用双侧键鼠标", "generic"), new SelectionOption("G102", "g102"), new SelectionOption("G304 / G305", "g304"), new SelectionOption("G Pro Wireless（GPW）", "gpw"), new SelectionOption("G Pro X Superlight（GPX）", "gpw"), new SelectionOption("G402", "g402"), new SelectionOption("G502 Hero", "g502hero"), new SelectionOption("G502 X", "g502x") };
-        MouseModelList.SelectionChanged += (_, _) =>
-        {
-            RefreshKeyOptions();
-            MarkTrayWeaponMenuDirty();
-        };
-        MouseModelList.SelectedIndex = 0;
-    }
-
-    private void SaveChanges()
-    {
-        try
-        {
-            _viewModel.Save();
-            SaveBtn.Content = "应用成功";
-            RefreshWeaponList(_viewModel.SelectedWeapon);
-            MarkTrayWeaponMenuDirty();
-            _saveResetTimer.Stop();
-            _saveResetTimer.Start();
-        }
-        catch (Exception exception)
-        {
-            SaveBtn.Content = "应用";
-            MessageBox.Show(exception.Message, "保存失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-    }
-
-    private static void ValidateSensitivityTextInput(object sender, TextCompositionEventArgs e)
-    {
-        if (sender is not TextBox textBox) return;
-        var proposed = textBox.Text.Remove(textBox.SelectionStart, textBox.SelectionLength).Insert(textBox.SelectionStart, e.Text);
-        e.Handled = !IsPotentialSensitivityValue(proposed);
-    }
-
-    private static void AdjustSensitivityWithArrowKeys(object sender, KeyEventArgs e)
-    {
-        if (sender is not TextBox textBox || (e.Key is not Key.Up and not Key.Down)) return;
-        textBox.Text = MainWindowViewModel.AdjustSensitivityValue(textBox.Text, e.Key == Key.Up ? 1 : -1);
-        textBox.CaretIndex = textBox.Text.Length;
-        e.Handled = true;
-    }
-
-    private void ShowSensitivityOverlay()
-    {
-        if (string.IsNullOrWhiteSpace(_viewModel.SelectedWeapon)) return;
-        _sensitivityOverlay.ShowWeaponSensitivity(
-            GetWeaponDisplayName(_viewModel.SelectedWeapon),
-            _viewModel.SensitivityX,
-            _viewModel.SensitivityY);
-    }
-
-    private static void ValidateSensitivityPaste(object sender, DataObjectPastingEventArgs e)
-    {
-        if (sender is not TextBox textBox || !e.DataObject.GetDataPresent(DataFormats.UnicodeText)) { e.CancelCommand(); return; }
-        var pasted = e.DataObject.GetData(DataFormats.UnicodeText) as string ?? string.Empty;
-        var proposed = textBox.Text.Remove(textBox.SelectionStart, textBox.SelectionLength).Insert(textBox.SelectionStart, pasted);
-        if (!MainWindowViewModel.IsValidSensitivityValue(proposed)) e.CancelCommand();
-    }
-
-    private static bool IsPotentialSensitivityValue(string value) =>
-        value.Length == 0 || Regex.IsMatch(value, "^\\d*(?:\\.\\d{0,2})?$");
 
     private void SetWindowIcon()
     {
@@ -989,138 +304,8 @@ public partial class MainWindow : Window
         TitleBarIcon.Source = icon;
     }
 
-    private sealed record WeaponListItem(string Name, string BindingSummary)
-    {
-        public string DisplayName => GetWeaponDisplayName(Name);
-        public bool HasBindingSummary => !string.IsNullOrWhiteSpace(BindingSummary);
-    }
 
-    private void RefreshKeyOptions()
-    {
-        foreach (var combo in _fieldInputs.Values.OfType<ComboBox>())
-        {
-            var currentValue = combo.SelectedValue?.ToString();
-            combo.ItemsSource = KeyOptionsFor(MouseModelList.SelectedValue?.ToString(), currentValue);
-            combo.SelectedValue = currentValue;
-        }
-    }
 
-    private static IReadOnlyList<KeyOption> KeyOptionsFor(string? mouseModel, string? currentValue)
-    {
-        var options = new List<KeyOption> { new("无按键(0)", "0"), new("左侧后退键(4)", "4"), new("左侧前进键(5)", "5") };
-        if (mouseModel == "gpw")
-        {
-            options.Add(new("右侧后退键(7)", "7"));
-            options.Add(new("右侧前进键(8)", "8"));
-        }
-        if (!string.IsNullOrWhiteSpace(currentValue) && options.All(option => option.Value != currentValue))
-        {
-            options.Add(new($"当前配置({currentValue})", currentValue));
-        }
-        return options;
-    }
-
-    private static IReadOnlyList<KeyOption> KeyOptions { get; } = KeyOptionsFor("generic", null);
-    private sealed record KeyOption(string Text, string? Value);
-    private sealed record SelectionOption(string Text, string Value);
-
-    private sealed class TrayMenuRenderer : Forms.ToolStripProfessionalRenderer
-    {
-        private readonly MainWindow _window;
-
-        public TrayMenuRenderer(MainWindow window)
-            : base(new TrayMenuColorTable(window))
-        {
-            _window = window;
-            RoundedEdges = true;
-        }
-
-        protected override void OnRenderToolStripBackground(Forms.ToolStripRenderEventArgs eventArgs)
-        {
-            var bounds = eventArgs.AffectedBounds;
-            using var brush = new LinearGradientBrush(bounds, _window.GetThemeColor("SurfacePopupStartColor"), _window.GetThemeColor("SurfacePopupEndColor"), 45f);
-            eventArgs.Graphics.FillRectangle(brush, bounds);
-        }
-
-        protected override void OnRenderToolStripBorder(Forms.ToolStripRenderEventArgs eventArgs)
-        {
-            // 菜单使用圆角裁剪区域，不绘制额外边框线，避免出现明显的矩形边框。
-        }
-
-        protected override void OnRenderMenuItemBackground(Forms.ToolStripItemRenderEventArgs eventArgs)
-        {
-            if (!eventArgs.Item.Selected || !eventArgs.Item.Enabled) return;
-
-            var bounds = new Drawing.Rectangle(2, 1, eventArgs.Item.Width - 4, eventArgs.Item.Height - 2);
-            using var brush = new Drawing.SolidBrush(_window.GetThemeColor("ControlHoverColor"));
-            eventArgs.Graphics.FillRectangle(brush, bounds);
-        }
-
-        protected override void OnRenderItemText(Forms.ToolStripItemTextRenderEventArgs eventArgs)
-        {
-            eventArgs.TextColor = eventArgs.Item.Enabled
-                ? _window.GetThemeColor("TextPrimaryColor")
-                : _window.GetThemeColor("TextSecondaryColor");
-            base.OnRenderItemText(eventArgs);
-        }
-
-        protected override void OnRenderSeparator(Forms.ToolStripSeparatorRenderEventArgs eventArgs)
-        {
-            var y = eventArgs.Item.Height / 2;
-            using var pen = new Drawing.Pen(_window.GetThemeColor("BorderDividerColor"));
-            eventArgs.Graphics.DrawLine(pen, 8, y, eventArgs.Item.Width - 8, y);
-        }
-
-        protected override void OnRenderArrow(Forms.ToolStripArrowRenderEventArgs eventArgs)
-        {
-            eventArgs.ArrowColor = _window.GetThemeColor("TextSecondaryColor");
-            base.OnRenderArrow(eventArgs);
-        }
-
-        protected override void OnRenderItemCheck(Forms.ToolStripItemImageRenderEventArgs eventArgs)
-        {
-            var bounds = eventArgs.ImageRectangle;
-            using var brush = new Drawing.SolidBrush(_window.GetThemeColor("AccentCyanColor"));
-            eventArgs.Graphics.FillRectangle(brush, bounds);
-            using var pen = new Drawing.Pen(_window.GetThemeColor("AccentForegroundColor"), 2f);
-            eventArgs.Graphics.DrawLines(pen, new[]
-            {
-                new Drawing.Point(bounds.Left + 3, bounds.Top + bounds.Height / 2),
-                new Drawing.Point(bounds.Left + bounds.Width / 2 - 1, bounds.Bottom - 4),
-                new Drawing.Point(bounds.Right - 3, bounds.Top + 4)
-            });
-        }
-    }
-
-    private sealed class TrayMenuColorTable : Forms.ProfessionalColorTable
-    {
-        private readonly MainWindow _window;
-
-        public TrayMenuColorTable(MainWindow window)
-        {
-            _window = window;
-            UseSystemColors = false;
-        }
-
-        public override Drawing.Color MenuBorder => _window.GetThemeColor("BorderPanelColor");
-        public override Drawing.Color MenuItemBorder => _window.GetThemeColor("BorderFocusColor");
-        public override Drawing.Color MenuItemSelected => _window.GetThemeColor("ControlHoverColor");
-        public override Drawing.Color MenuItemSelectedGradientBegin => _window.GetThemeColor("ControlHoverColor");
-        public override Drawing.Color MenuItemSelectedGradientEnd => _window.GetThemeColor("ControlHoverColor");
-        public override Drawing.Color ToolStripDropDownBackground => _window.GetThemeColor("SurfacePopupEndColor");
-        public override Drawing.Color ImageMarginGradientBegin => _window.GetThemeColor("SurfacePopupStartColor");
-        public override Drawing.Color ImageMarginGradientMiddle => _window.GetThemeColor("SurfacePopupStartColor");
-        public override Drawing.Color ImageMarginGradientEnd => _window.GetThemeColor("SurfacePopupEndColor");
-        public override Drawing.Color SeparatorDark => _window.GetThemeColor("BorderDividerColor");
-        public override Drawing.Color SeparatorLight => _window.GetThemeColor("BorderDividerColor");
-    }
-
-    private Drawing.Color GetThemeColor(string key)
-    {
-        if (Resources[key] is System.Windows.Media.Color color)
-            return Drawing.Color.FromArgb(color.A, color.R, color.G, color.B);
-        return Drawing.Color.FromArgb(255, 15, 32, 56);
-    }
 }
 
 

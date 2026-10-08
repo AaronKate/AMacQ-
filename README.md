@@ -56,6 +56,28 @@ dotnet restore .\AMacQ配置编辑器.sln
 dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 ```
 
+## 回归测试
+
+改动配置读写、按键槽位、搜索排序等逻辑后，请跑一遍常驻回归测试：
+
+```powershell
+dotnet run --project .\tests\AMacQConfigEditor.Tests\AMacQConfigEditor.Tests.csproj
+```
+
+它是一个自包含的控制台程序（不依赖测试框架），逐项打印 `PASS`/`FAIL`，全部通过时退出码为 0。覆盖的都是历史上真实出过问题的地方：
+
+- Lua 解析：枪械识别（含 `AKS-74` 这类带连字符的名字）、全局变量不被误认成枪械、取值；
+- Lua 写回：批量写入与逐条替换等价、同槽位冲突清零、`0` 表示解绑、字符串写入的引号行为；
+- 搜索排序：完全匹配优先于前缀、多关键词、中文名与按键摘要命中；
+- 按键槽位：主键 / Alt / Ctrl 的后缀映射与冲突检测；
+- 键值换算：侧键 `XBUTTON1/2` 与主键区、小键盘数字；
+- 快速切换窗口：筛选、自动选中、列表显示中文名、`Enter` 确认、`Esc` 取消；
+- 托盘菜单结构：枪械列表为"骨架 + 按需展开"，展开后补齐三个按键位子菜单且可重复展开；
+- 配置文件的禁用/恢复状态机：关闭程序后禁用、启动时恢复，两份并存时也仍然生效（以较新的活动文件为准）；
+- 编码识别：GBK/ANSI 配置按原编码读出并原样写回（不被偷偷改成 UTF-8），UTF-8 BOM 与 UTF-16 正确处理；
+- **键值为 6/7/8/9 的枪械切换后仍能正常保存且原值不被清空**（曾因下拉框表示不了该值而保存失败）；
+- 非法值在写盘前被校验拦下，并给出具体字段提示。
+
 ## 项目结构
 
 | 路径 | 说明 |
@@ -63,15 +85,22 @@ dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 | `AMacQ配置编辑器.sln` | Visual Studio 解决方案 |
 | `src/AMacQConfigEditor` | WPF 主项目 |
 | `src/AMacQConfigEditor/App.xaml.cs` | 启动流程：主题、权限、授权校验 |
-| `src/AMacQConfigEditor/MainWindow.xaml(.cs)` | 主界面布局、托盘菜单、全局快捷键与业务逻辑 |
+| `src/AMacQConfigEditor/MainWindow.xaml` | 主界面布局与主题资源 |
+| `src/AMacQConfigEditor/MainWindow.xaml.cs` | 主窗口：字段、构造、生命周期、部署与授权提示 |
+| `src/AMacQConfigEditor/MainWindow.TrayMenu.cs` | 托盘图标与菜单（含按键位子菜单的懒加载） |
+| `src/AMacQConfigEditor/MainWindow.HotKeys.cs` | 全局快捷键注册与消息处理、灵敏度提示 |
+| `src/AMacQConfigEditor/MainWindow.Weapons.cs` | 枪械列表、搜索过滤、字段卡片、保存与输入校验 |
+| `src/AMacQConfigEditor/MainWindow.QuickSwitch.cs` | 快速切换窗口入口、后台等待按键绑定 |
+| `src/AMacQConfigEditor/QuickSwitchWindow.xaml(.cs)` | `Ctrl + Alt + M` 唤起的纯键盘枪械切换窗口 |
 | `src/AMacQConfigEditor/HelpWindow.xaml(.cs)` | 内置使用说明窗口（含图文教程与截图查看器） |
 | `src/AMacQConfigEditor/LicenseWindow.xaml(.cs)` | 机器码显示与许可证导入窗口 |
 | `src/AMacQConfigEditor/AdminPromptWindow.xaml(.cs)` | 管理员权限提示窗口 |
-| `src/AMacQConfigEditor/SensitivityOverlayWindow.xaml(.cs)` | 屏幕右上角灵敏度悬浮提示窗口 |
-| `src/AMacQConfigEditor/Services` | Lua 读写、编码、原子写入、资源部署、主题、G HUB 启动等服务 |
-| `src/AMacQConfigEditor/ViewModels` | 配置编辑状态与界面数据绑定 |
+| `src/AMacQConfigEditor/SensitivityOverlayWindow.xaml(.cs)` | 屏幕右上角悬浮提示窗口（灵敏度与绑键结果） |
+| `src/AMacQConfigEditor/Services` | Lua 读写、编码、原子写入、按键监听、资源部署、主题、G HUB 启动等服务 |
+| `src/AMacQConfigEditor/ViewModels` | 配置编辑状态、界面数据绑定与搜索过滤规则 |
 | `src/AMacQConfigEditor/Licensing` | 机器码、许可证文档、验签与存储 |
 | `src/AMacQConfigEditor/Resources` | 内嵌资源包（ZIP）与使用说明截图 |
+| `tests/AMacQConfigEditor.Tests` | 常驻回归测试（控制台程序，见上节） |
 | `assets/AMacQ.ico` | EXE 与自绘标题栏使用的内嵌图标 |
 | `scripts` | 构建、重命名发布与混淆脚本 |
 | `tools/AMacQLicenseGenerator` | 授权签发工具（WPF 界面 / 命令行 / 离线网页） |
@@ -118,7 +147,10 @@ dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 - 最小化主窗口或点击最小化按钮会隐藏到托盘，双击托盘图标可还原窗口。
 - 托盘右键菜单包含：打开主窗口、当前枪械状态、可直接调整当前枪械 X / Y 的「灵敏度」子菜单（每项 ±0.05，连续调整时菜单保持打开）、按分类展开的枪械列表，以及退出。
 - 枪械列表按突击步枪 / 冲锋枪 / 轻机枪 / 射手步枪 / 其它分组，选中枪械后可直接修改 Alt / Ctrl 绑定，修改即保存。
-- 全局快捷键 `Ctrl + Alt + M` 可在鼠标位置打开或关闭该快捷菜单，方便在游戏中快速切换枪械与按键。
+- 全局快捷键 `Ctrl + Alt + M` 会打开「快速切换窗口」：可直接用键盘切换当前枪械——输入枪械名或内部代码筛选（支持中文名，如“野牛”），`↑`/`↓` 移动，`Enter` 切换并保存。窗口在鼠标所在屏幕居中弹出，并提示当前枪械与即将切换到的枪械。
+- 按 `Enter` 后**窗口立即消失并进入后台等待**：这时直接在鼠标上按一下要绑定的侧键（侧键 4 = 后退键、侧键 5 = 前进键）即完成绑定，屏幕右上角会用悬浮提示反馈结果（如 `MK4 · 主键 已绑定 侧键5`）；也可以直接敲数字键 `0/4/5/6/7/8/9` 指定。等待约 15 秒没有任何输入会自动结束，不影响正在进行的操作。
+- 想绑到别的槽位就用 `Alt + Enter`（Alt 槽位）或 `Ctrl + Enter`（Ctrl 槽位）。只想换枪不想绑键，选好枪后不按任何键即可。
+- 若该“槽位 + 按键”已被其它枪械占用，写入时会自动清空对方，并在悬浮提示中标注枪名。绑定同样可以在托盘菜单中修改。
 - 托盘菜单与子菜单使用自绘渲染（圆角、渐变、主题色与勾选样式），并监听外部点击以自动收起。
 
 ### 灵敏度悬浮提示
@@ -154,7 +186,7 @@ dotnet build .\AMacQ配置编辑器.sln -c Release --no-restore
 | `Ctrl + Alt + 上方向键` | 当前枪械基础灵敏度 Y +0.01 |
 | `Ctrl + Alt + -` | 当前枪械基础灵敏度 Y −0.05 |
 | `Ctrl + Alt + =` | 当前枪械基础灵敏度 Y +0.05 |
-| `Ctrl + Alt + M` | 打开或关闭桌面枪械快捷菜单 |
+| `Ctrl + Alt + M` | 打开快速切换窗口（键盘筛选 + `Enter` 切换当前枪械） |
 
 ## 离线授权
 

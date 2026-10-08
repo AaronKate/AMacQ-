@@ -341,7 +341,7 @@
                     <TextBlock Text="程序快捷键" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryTextBrush}"/>
                     <TextBlock Text="以下快捷键为全局快捷键，需按住 Ctrl 与 Alt；按下一次触发一次，长按不会重复触发。主窗口最小化到托盘后仍可使用。" TextWrapping="Wrap"
                                FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="22"/>
-                    <TextBlock Text="Ctrl + Alt + 左方向键：当前枪械基础灵敏度 X −0.01。&#x0a;Ctrl + Alt + 右方向键：当前枪械基础灵敏度 X +0.01。&#x0a;Ctrl + Alt + 下方向键：当前枪械基础灵敏度 Y −0.01。&#x0a;Ctrl + Alt + 上方向键：当前枪械基础灵敏度 Y +0.01。&#x0a;Ctrl + Alt + -：当前枪械基础灵敏度 Y −0.05。&#x0a;Ctrl + Alt + =：当前枪械基础灵敏度 Y +0.05。&#x0a;Ctrl + Alt + M：打开或关闭桌面枪械快捷菜单，菜单中可选择枪械并修改按键绑定。" TextWrapping="Wrap"
+                    <TextBlock Text="Ctrl + Alt + 左方向键：当前枪械基础灵敏度 X −0.01。&#x0a;Ctrl + Alt + 右方向键：当前枪械基础灵敏度 X +0.01。&#x0a;Ctrl + Alt + 下方向键：当前枪械基础灵敏度 Y −0.01。&#x0a;Ctrl + Alt + 上方向键：当前枪械基础灵敏度 Y +0.01。&#x0a;Ctrl + Alt + -：当前枪械基础灵敏度 Y −0.05。&#x0a;Ctrl + Alt + =：当前枪械基础灵敏度 Y +0.05。&#x0a;Ctrl + Alt + M：打开快速切换窗口，用键盘选枪——输入枪械名或代码筛选（中文名同样支持，如“野牛”），↑/↓ 选择。&#x0a;按 Enter 后窗口立即消失并进入后台等待：直接在鼠标上按一下要绑定的侧键即完成绑定（4 = 后退键、5 = 前进键），结果会在屏幕右上角以悬浮提示显示（如“MK4 · 主键 已绑定 侧键5”）；也可以直接敲数字键 0/4/5/6/7/8/9 指定。等待约 15 秒无输入会自动结束。&#x0a;要绑到别的槽位用 Alt + Enter（Alt 槽位）或 Ctrl + Enter（Ctrl 槽位）；只想换枪不想绑键，选好枪后不按任何键即可。若该“槽位 + 按键”已被其它枪械占用，会自动清空对方并在悬浮提示里标注枪名。" TextWrapping="Wrap"
                                FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0" LineHeight="24"/>
                     <TextBlock Text="灵敏度快捷键和托盘灵敏度调整只调整当前选中枪械的基础 X/Y 值，不修改增幅值；连续调整会合并为一次写入，停止操作约 2 秒后会自动保存到灵敏度配置文件。" TextWrapping="Wrap"
                                FontSize="13" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,12,0,0" LineHeight="22"/>
