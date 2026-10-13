@@ -60,6 +60,7 @@ public partial class QuickSwitchWindow : Window
         SearchBox.GotKeyboardFocus += (_, _) => SearchPlaceholder.Visibility = Visibility.Collapsed;
         SearchBox.LostKeyboardFocus += (_, _) => UpdatePlaceholder();
         WeaponList.MouseDoubleClick += (_, _) => ConfirmSelection(Keyboard.Modifiers);
+        QuickSwitchCloseButton.Click += (_, _) => Dismiss();
         Loaded += (_, _) =>
         {
             PositionNearCursor();
@@ -67,6 +68,42 @@ public partial class QuickSwitchWindow : Window
             FocusSearch();
         };
     }
+
+    /// <summary>
+    /// 唤起一个被复用的窗口实例。
+    ///
+    /// 这个窗口会被频繁的 Ctrl+Alt+M 反复唤起：如果每次都 Close 后重建，整棵视觉树、
+    /// 主题资源与半透明分层窗口的合成缓冲都要重新分配，任务管理器里内存就会"开一次涨一次"。
+    /// 改为隐藏后复用，只有第一次打开付出创建成本；但每次唤起必须重置上一次的会话状态：
+    /// 行数据按宿主当前值重建（绑定关系可能已变），搜索词清空并重新过滤。
+    /// 首次显示时 Loaded 会负责定位与聚焦，这里只处理后续的复用唤起。
+    /// </summary>
+    internal void ShowFresh()
+    {
+        RebuildRows();
+        SearchBox.Clear();
+        ApplyFilter();
+        Show();
+
+        if (IsLoaded)
+        {
+            PositionNearCursor();
+            FocusSearch();
+        }
+    }
+
+    /// <summary>重建行数据：按键绑定摘要取自宿主的当前状态，不能用上次唤起时的快照。</summary>
+    private void RebuildRows()
+    {
+        _rows.Clear();
+        _rows.AddRange(_host.WeaponNames.Select(name => new WeaponRow(name, _host.DisplayNameFor(name), _host.BindingSummaryFor(name))));
+    }
+
+    /// <summary>
+    /// 结束本次会话但保留实例供下次复用：隐藏而不是销毁。真正的 Close 只发生在
+    /// 主窗口退出时的统一清理里。
+    /// </summary>
+    internal void Dismiss() => Hide();
 
     public void FocusSearch()
     {
@@ -131,7 +168,7 @@ public partial class QuickSwitchWindow : Window
         switch (key)
         {
             case Key.Escape:
-                Close();
+                Dismiss();
                 return true;
             case Key.Enter:
                 ConfirmSelection(modifiers);
@@ -191,7 +228,7 @@ public partial class QuickSwitchWindow : Window
                 : WeaponBindingSlot.Primary;
 
         _host.ConfirmWeapon(row.Name, slot);
-        Close();
+        Dismiss();
     }
 
     private void PositionNearCursor()

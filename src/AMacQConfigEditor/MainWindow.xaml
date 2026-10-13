@@ -371,12 +371,14 @@
       </Setter>
     </Style>
     <Storyboard x:Key="BackgroundGlowAnimation" RepeatBehavior="Forever" AutoReverse="True">
-      <DoubleAnimation Storyboard.TargetName="GlowCyanTransform" Storyboard.TargetProperty="X" From="-100" To="100" Duration="0:0:9"/>
-      <DoubleAnimation Storyboard.TargetName="GlowCyanTransform" Storyboard.TargetProperty="Y" From="70" To="-80" Duration="0:0:9"/>
-      <DoubleAnimation Storyboard.TargetName="GlowCyan" Storyboard.TargetProperty="Opacity" From="0.20" To="0.32" Duration="0:0:9"/>
-      <DoubleAnimation Storyboard.TargetName="GlowVioletTransform" Storyboard.TargetProperty="X" From="100" To="-100" Duration="0:0:12"/>
-      <DoubleAnimation Storyboard.TargetName="GlowVioletTransform" Storyboard.TargetProperty="Y" From="-70" To="85" Duration="0:0:12"/>
-      <DoubleAnimation Storyboard.TargetName="GlowViolet" Storyboard.TargetProperty="Opacity" From="0.20" To="0.28" Duration="0:0:12"/>
+      <!-- 限 20fps：光晕是缓慢漂移的氛围效果，限帧后视觉无差别；不限帧时 WPF 每帧都要为
+           渲染线程克隆变换对象，实测工作集会以每几秒 0.1MB 的速度持续上涨。 -->
+      <DoubleAnimation Timeline.DesiredFrameRate="20" Storyboard.TargetName="GlowCyanTransform" Storyboard.TargetProperty="X" From="-100" To="100" Duration="0:0:9"/>
+      <DoubleAnimation Timeline.DesiredFrameRate="20" Storyboard.TargetName="GlowCyanTransform" Storyboard.TargetProperty="Y" From="70" To="-80" Duration="0:0:9"/>
+      <DoubleAnimation Timeline.DesiredFrameRate="20" Storyboard.TargetName="GlowCyan" Storyboard.TargetProperty="Opacity" From="0.20" To="0.32" Duration="0:0:9"/>
+      <DoubleAnimation Timeline.DesiredFrameRate="20" Storyboard.TargetName="GlowVioletTransform" Storyboard.TargetProperty="X" From="100" To="-100" Duration="0:0:12"/>
+      <DoubleAnimation Timeline.DesiredFrameRate="20" Storyboard.TargetName="GlowVioletTransform" Storyboard.TargetProperty="Y" From="-70" To="85" Duration="0:0:12"/>
+      <DoubleAnimation Timeline.DesiredFrameRate="20" Storyboard.TargetName="GlowViolet" Storyboard.TargetProperty="Opacity" From="0.20" To="0.28" Duration="0:0:12"/>
     </Storyboard>
     <Storyboard x:Key="DeploymentSuccessPulse">
       <DoubleAnimation Storyboard.TargetName="DeploymentPulseBorder" Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
@@ -386,11 +388,8 @@
       <DoubleAnimation Storyboard.TargetName="DeploymentScanBand" Storyboard.TargetProperty="Opacity" From="0.85" To="0" BeginTime="0:0:0.48" Duration="0:0:0.17"/>
     </Storyboard>
   </Window.Resources>
-  <Window.Triggers>
-    <EventTrigger RoutedEvent="Window.Loaded">
-      <BeginStoryboard Storyboard="{StaticResource BackgroundGlowAnimation}"/>
-    </EventTrigger>
-  </Window.Triggers>
+  <!-- 背景光晕动画由 MainWindow.StartBackgroundGlow 以可控方式启动：隐藏到托盘后需要暂停它，
+       非可控的 BeginStoryboard 无法从代码里停掉。 -->
   <Border Background="{DynamicResource AppBackgroundBrush}" CornerRadius="12" ClipToBounds="True">
     <Grid>
     <Grid.RowDefinitions>

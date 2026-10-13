@@ -87,16 +87,19 @@ dotnet run --project .\tests\AMacQConfigEditor.Tests\AMacQConfigEditor.Tests.csp
 | `src/AMacQConfigEditor/App.xaml.cs` | 启动流程：主题、权限、授权校验 |
 | `src/AMacQConfigEditor/MainWindow.xaml` | 主界面布局与主题资源 |
 | `src/AMacQConfigEditor/MainWindow.xaml.cs` | 主窗口：字段、构造、生命周期、部署与授权提示 |
+| `src/AMacQConfigEditor/WeaponBindingSlot.cs` | 按键绑定槽位（主键 / Alt / Ctrl）定义 |
 | `src/AMacQConfigEditor/MainWindow.TrayMenu.cs` | 托盘图标与菜单（含按键位子菜单的懒加载） |
 | `src/AMacQConfigEditor/MainWindow.HotKeys.cs` | 全局快捷键注册与消息处理、灵敏度提示 |
 | `src/AMacQConfigEditor/MainWindow.Weapons.cs` | 枪械列表、搜索过滤、字段卡片、保存与输入校验 |
 | `src/AMacQConfigEditor/MainWindow.QuickSwitch.cs` | 快速切换窗口入口、后台等待按键绑定 |
-| `src/AMacQConfigEditor/QuickSwitchWindow.xaml(.cs)` | `Ctrl + Alt + M` 唤起的纯键盘枪械切换窗口 |
+| `src/AMacQConfigEditor/MainWindow.BackgroundMemory.cs` | 托盘隐藏后的内存让渡：暂停常驻动画、空闲换出工作集 |
+| `src/AMacQConfigEditor/QuickSwitchWindow.xaml(.cs)` | `Ctrl + Alt + M` 唤起的纯键盘枪械切换窗口（实例复用） |
 | `src/AMacQConfigEditor/HelpWindow.xaml(.cs)` | 内置使用说明窗口（含图文教程与截图查看器） |
 | `src/AMacQConfigEditor/LicenseWindow.xaml(.cs)` | 机器码显示与许可证导入窗口 |
 | `src/AMacQConfigEditor/AdminPromptWindow.xaml(.cs)` | 管理员权限提示窗口 |
 | `src/AMacQConfigEditor/SensitivityOverlayWindow.xaml(.cs)` | 屏幕右上角悬浮提示窗口（灵敏度与绑键结果） |
 | `src/AMacQConfigEditor/Services` | Lua 读写、编码、原子写入、按键监听、资源部署、主题、G HUB 启动等服务 |
+| `src/AMacQConfigEditor/Models` | 配置会话等领域模型 |
 | `src/AMacQConfigEditor/ViewModels` | 配置编辑状态、界面数据绑定与搜索过滤规则 |
 | `src/AMacQConfigEditor/Licensing` | 机器码、许可证文档、验签与存储 |
 | `src/AMacQConfigEditor/Resources` | 内嵌资源包（ZIP）与使用说明截图 |
@@ -113,6 +116,7 @@ dotnet run --project .\tests\AMacQConfigEditor.Tests\AMacQConfigEditor.Tests.csp
 - 点击侧栏「资源部署状态」卡片中的一键部署按钮，即可将内嵌资源包解压到本机：`C:\ProgramData\Microsoft\Windows\Caches\<随机目录>\`。
 - 首次部署会生成随机目录并写入安装记录，后续启动复用同一目录；旧版本遗留在桌面或 C 盘根目录的启动脚本会在启动时清理。
 - 解压完成后会在桌面生成启动脚本 `GHUB - Sorin 25.1 S11-1.lua`，并在资源管理器中选中该文件，同时尝试自动拉起已安装的罗技 G HUB。
+- 程序最小化到托盘时会自动删除桌面上的启动脚本：它只在“导入罗技驱动”那一刻有用，之后留在桌面只会暴露宏的入口。删除失败（文件被占用）不影响最小化，之后每次最小化或下次启动都会再尝试。
 - 部署前会检测是否安装罗技 G HUB：未安装时弹窗提供「下载」（打开官方安装页）和「知道了」（仍继续解压资源包）两个选项。
 - 部署过程带进度对话框，显示文件计数、百分比与当前处理的文件，并给出成功或失败结果。
 - 程序运行期间，安装目录中的两个配置文件会被临时重命名禁用（启动时恢复、退出时禁用），授权过期时同样会禁用。
@@ -144,11 +148,11 @@ dotnet run --project .\tests\AMacQConfigEditor.Tests\AMacQConfigEditor.Tests.csp
 
 ### 托盘菜单与桌面快捷菜单
 
-- 最小化主窗口或点击最小化按钮会隐藏到托盘，双击托盘图标可还原窗口。
+- 最小化主窗口或点击最小化按钮会隐藏到托盘，双击托盘图标可还原窗口。隐藏后程序会进入后台省内存模式：暂停主窗口的常驻光晕动画，并在空闲约 3 秒后回收托管垃圾、把工作集换出物理内存（提交总量不变，下次交互会有一次轻微缺页顿挫）；还原窗口时自动恢复正常。
 - 托盘右键菜单包含：打开主窗口、当前枪械状态、可直接调整当前枪械 X / Y 的「灵敏度」子菜单（每项 ±0.05，连续调整时菜单保持打开）、按分类展开的枪械列表，以及退出。
 - 枪械列表按突击步枪 / 冲锋枪 / 轻机枪 / 射手步枪 / 其它分组，选中枪械后可直接修改 Alt / Ctrl 绑定，修改即保存。
-- 全局快捷键 `Ctrl + Alt + M` 会打开「快速切换窗口」：可直接用键盘切换当前枪械——输入枪械名或内部代码筛选（支持中文名，如“野牛”），`↑`/`↓` 移动，`Enter` 切换并保存。窗口在鼠标所在屏幕居中弹出，并提示当前枪械与即将切换到的枪械。
-- 按 `Enter` 后**窗口立即消失并进入后台等待**：这时直接在鼠标上按一下要绑定的侧键（侧键 4 = 后退键、侧键 5 = 前进键）即完成绑定，屏幕右上角会用悬浮提示反馈结果（如 `MK4 · 主键 已绑定 侧键5`）；也可以直接敲数字键 `0/4/5/6/7/8/9` 指定。等待约 15 秒没有任何输入会自动结束，不影响正在进行的操作。
+- 全局快捷键 `Ctrl + Alt + M` 会打开「快速切换窗口」：可直接用键盘切换当前枪械——输入枪械名或内部代码筛选（支持中文名，如“野牛”），`↑`/`↓` 移动，`Enter` 切换并保存。窗口在鼠标所在屏幕居中弹出，并提示当前枪械与即将切换到的枪械。窗口隐藏后会被复用而不是销毁，避免反复开关时内存“开一次涨一次”；再次按 `Ctrl + Alt + M` 唤起时会清空搜索词并按当前绑定重建列表，窗口已打开时再按一次只把焦点移回搜索框并保留已输入的关键词。窗口右上角也有关闭按钮。
+- 按 `Enter` 后**窗口立即消失并进入后台等待**：这时直接在鼠标上按一下要绑定的侧键（侧键 4 = 后退键、侧键 5 = 前进键）即完成绑定，屏幕右上角会用悬浮提示反馈结果（如 `MK4 · 主键 已绑定 侧键5`）；也可以直接敲数字键 `0/4/5/6/7/8/9` 指定。等待约 15 秒没有任何输入会自动结束，不影响正在进行的操作。绑定成功落盘后，这次按键会继续传给后续程序（包括 G HUB 宏），不需要为了触发宏再按一次；只有保存失败时才会拦截该按键，并在悬浮提示中说明「绑定保存失败，按键未触发」。
 - 想绑到别的槽位就用 `Alt + Enter`（Alt 槽位）或 `Ctrl + Enter`（Ctrl 槽位）。只想换枪不想绑键，选好枪后不按任何键即可。
 - 若该“槽位 + 按键”已被其它枪械占用，写入时会自动清空对方，并在悬浮提示中标注枪名。绑定同样可以在托盘菜单中修改。
 - 托盘菜单与子菜单使用自绘渲染（圆角、渐变、主题色与勾选样式），并监听外部点击以自动收起。

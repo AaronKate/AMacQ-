@@ -270,7 +270,9 @@ public partial class MainWindow
         return extended;
     }
 
-    private void SaveChanges()
+    private void SaveChanges() => TrySaveChanges();
+
+    private bool TrySaveChanges(bool showErrorDialog = true)
     {
         try
         {
@@ -280,11 +282,16 @@ public partial class MainWindow
             MarkTrayWeaponMenuDirty();
             _saveResetTimer.Stop();
             _saveResetTimer.Start();
+            return true;
         }
         catch (Exception exception)
         {
             SaveBtn.Content = "应用";
-            MessageBox.Show(exception.Message, "保存失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (showErrorDialog)
+            {
+                MessageBox.Show(exception.Message, "保存失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            return false;
         }
     }
 

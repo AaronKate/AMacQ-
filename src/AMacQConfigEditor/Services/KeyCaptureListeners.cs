@@ -7,6 +7,7 @@ namespace AMacQConfigEditor.Services;
 /// 监听鼠标侧键，用于"选完枪械后直接按一下侧键完成绑定"。
 ///
 /// 低级鼠标钩子只在监听期间安装，回调会尽快返回，避免系统因为超时把钩子摘掉。
+/// 捕获到目标按键后不吞掉输入，而是继续传给后续钩子，让同一次按键也能触发 G HUB 宏。
 /// 鼠标侧键在系统层面只会区分 XBUTTON1 / XBUTTON2，因此这里能稳定识别的是配置里的
 /// 4（后退）与 5（前进）；6/7/8/9 这些由 G HUB 侧识别的按键无法从系统钩子获得，
 /// 需要在窗口里用数字键指定。
@@ -18,7 +19,7 @@ internal sealed class MouseSideButtonListener : IDisposable
     private const uint XButton1 = 0x0001;
     private const uint XButton2 = 0x0002;
 
-    private readonly Action<string> _onCaptured;
+    private readonly Func<string, bool> _onCaptured;
     private readonly HookProc _callback;
     private IntPtr _hook;
 
@@ -47,7 +48,7 @@ internal sealed class MouseSideButtonListener : IDisposable
         public IntPtr ExtraInfo;
     }
 
-    public MouseSideButtonListener(Action<string> onCaptured)
+    public MouseSideButtonListener(Func<string, bool> onCaptured)
     {
         _onCaptured = onCaptured ?? throw new ArgumentNullException(nameof(onCaptured));
         _callback = HandleHook;
@@ -79,8 +80,8 @@ internal sealed class MouseSideButtonListener : IDisposable
             var value = TranslateXButton(xButton);
             if (value is not null)
             {
-                _onCaptured(value);
-                return (IntPtr)1; // 绑定期间吞掉这次点击，避免同时触发游戏内动作
+                // 只有绑定成功落盘后才放行；保存失败时继续拦截，避免 G HUB 读取旧配置。
+                if (!_onCaptured(value)) return (IntPtr)1;
             }
         }
 
@@ -99,6 +100,7 @@ internal sealed class MouseSideButtonListener : IDisposable
 /// <summary>
 /// 监听数字键 4/5/6/7/8/9/0，作为侧键监听的补充：某些鼠标（或 G HUB 的按键映射）
 /// 无法从系统钩子拿到侧键，此时用户在监听期间直接敲数字键也能完成绑定。
+/// 捕获后同样放行原始输入，避免用户必须再按一次才能触发宏。
 /// </summary>
 internal sealed class DigitKeyListener : IDisposable
 {
@@ -106,7 +108,7 @@ internal sealed class DigitKeyListener : IDisposable
     private const int WM_KEYDOWN = 0x0100;
     private const int WM_SYSKEYDOWN = 0x0104;
 
-    private readonly Action<string> _onCaptured;
+    private readonly Func<string, bool> _onCaptured;
     private readonly HookProc _callback;
     private IntPtr _hook;
 
@@ -134,7 +136,7 @@ internal sealed class DigitKeyListener : IDisposable
         public IntPtr ExtraInfo;
     }
 
-    public DigitKeyListener(Action<string> onCaptured)
+    public DigitKeyListener(Func<string, bool> onCaptured)
     {
         _onCaptured = onCaptured ?? throw new ArgumentNullException(nameof(onCaptured));
         _callback = HandleHook;
@@ -165,8 +167,8 @@ internal sealed class DigitKeyListener : IDisposable
             var value = TranslateVirtualKey(info.VirtualKeyCode);
             if (value is not null)
             {
-                _onCaptured(value);
-                return (IntPtr)1;
+                // 只有绑定成功落盘后才放行；保存失败时继续拦截，避免 G HUB 读取旧配置。
+                if (!_onCaptured(value)) return (IntPtr)1;
             }
         }
 

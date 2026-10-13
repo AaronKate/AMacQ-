@@ -28,6 +28,7 @@
     <Color x:Key="BorderPanelColor">#6488C4</Color>
     <Color x:Key="ControlHoverColor">#1E5274</Color>
     <Color x:Key="ControlPressedColor">#17415F</Color>
+    <Color x:Key="DangerCloseHoverColor">#C42B4B</Color>
     <Color x:Key="ScrollTrackColor">#10243A</Color>
     <Color x:Key="ScrollThumbColor">#5577C8</Color>
     <Color x:Key="ScrollThumbHoverColor">#71E1FF</Color>
@@ -41,6 +42,9 @@
     <SolidColorBrush x:Key="DividerBrush" Color="{DynamicResource BorderDividerColor}"/>
     <SolidColorBrush x:Key="PanelOutlineBrush" Color="{DynamicResource BorderPanelColor}"/>
     <SolidColorBrush x:Key="ControlHoverBrush" Color="{DynamicResource ControlHoverColor}"/>
+    <SolidColorBrush x:Key="WindowCloseHoverBrush" Color="{DynamicResource DangerCloseHoverColor}"/>
+    <SolidColorBrush x:Key="ScrollTrackBrush" Color="{DynamicResource ScrollTrackColor}"/>
+    <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="{DynamicResource ScrollThumbHoverColor}"/>
     <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
       <GradientStop Color="{DynamicResource SurfaceAppStartColor}" Offset="0"/>
       <GradientStop Color="{DynamicResource SurfaceAppEndColor}" Offset="1"/>
@@ -54,6 +58,64 @@
       <GradientStop Color="{DynamicResource AccentIndigoColor}" Offset="1"/>
     </LinearGradientBrush>
 
+    <Style x:Key="DarkScrollThumb" TargetType="Thumb">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Thumb">
+            <Border x:Name="ScrollThumb" Background="{StaticResource AccentGradientBrush}" CornerRadius="5" Margin="1"/>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ScrollThumb" Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}"/>
+              </Trigger>
+              <Trigger Property="IsDragging" Value="True">
+                <Setter TargetName="ScrollThumb" Property="Background" Value="{DynamicResource FocusBorderBrush}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="DarkScrollTrackButton" TargetType="RepeatButton">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RepeatButton">
+            <Border x:Name="TrackSurface" Background="Transparent" CornerRadius="4"/>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+      <Setter Property="Width" Value="11"/>
+      <Setter Property="Background" Value="{DynamicResource ScrollTrackBrush}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ScrollBar">
+            <Border Background="{TemplateBinding Background}" CornerRadius="5" Margin="1">
+              <Track x:Name="PART_Track" Orientation="{TemplateBinding Orientation}" IsDirectionReversed="True">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton x:Name="DecreaseTrackButton" Command="ScrollBar.PageUpCommand" Style="{StaticResource DarkScrollTrackButton}"/>
+                </Track.DecreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb Style="{StaticResource DarkScrollThumb}"/>
+                </Track.Thumb>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton x:Name="IncreaseTrackButton" Command="ScrollBar.PageDownCommand" Style="{StaticResource DarkScrollTrackButton}"/>
+                </Track.IncreaseRepeatButton>
+              </Track>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="Orientation" Value="Horizontal">
+                <Setter TargetName="DecreaseTrackButton" Property="Command" Value="{x:Static ScrollBar.PageLeftCommand}"/>
+                <Setter TargetName="IncreaseTrackButton" Property="Command" Value="{x:Static ScrollBar.PageRightCommand}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
     <Style x:Key="SearchBox" TargetType="TextBox">
       <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
       <Setter Property="Background" Value="Transparent"/>
@@ -66,6 +128,35 @@
                再叠加一次会让文字与光标偏右（占位文字与光标对不齐），垂直方向过窄时还会把字形裁成一条细缝。 -->
           <ControlTemplate TargetType="TextBox">
             <ScrollViewer x:Name="PART_ContentHost" VerticalContentAlignment="Center"/>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="QuickSwitchCloseButton" TargetType="Button">
+      <Setter Property="Width" Value="28"/>
+      <Setter Property="Height" Value="24"/>
+      <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="0"/>
+      <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+      <Setter Property="FontSize" Value="10"/>
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="CloseSurface" Background="{TemplateBinding Background}" CornerRadius="5">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="CloseSurface" Property="Background" Value="{DynamicResource WindowCloseHoverBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource AccentForegroundBrush}"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="CloseSurface" Property="Opacity" Value="0.76"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
@@ -122,8 +213,14 @@
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
-      <TextBlock Grid.Row="0" Text="快速切换枪械" FontSize="11" FontWeight="SemiBold"
-                 Foreground="{DynamicResource SecondaryTextBrush}" Margin="2,0,0,6"/>
+      <Grid Grid.Row="0" Margin="2,0,2,4" MinHeight="24">
+        <TextBlock Text="快速切换枪械" FontSize="11" FontWeight="SemiBold"
+                   Foreground="{DynamicResource SecondaryTextBrush}"
+                   VerticalAlignment="Center"/>
+        <Button Name="QuickSwitchCloseButton" Content="&#xE8BB;" ToolTip="关闭"
+                HorizontalAlignment="Right" VerticalAlignment="Center"
+                Style="{StaticResource QuickSwitchCloseButton}"/>
+      </Grid>
 
       <Border Grid.Row="1" Background="{DynamicResource InputSurfaceBrush}"
               BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" CornerRadius="6" Margin="0,0,0,8">

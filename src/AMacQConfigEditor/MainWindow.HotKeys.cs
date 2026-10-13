@@ -135,10 +135,17 @@ public partial class MainWindow
     private void HideToTray()
     {
         Hide();
+        EnterBackgroundMode();
+
+        // 最小化到托盘时顺手清掉桌面上的 G HUB 启动脚本：它只在"导入罗技驱动"那一刻
+        // 有用，之后留在桌面只会暴露宏的入口。删除失败（被占用）不影响最小化，
+        // 之后每次最小化或下次启动都会再尝试。
+        ObscuredPackageDeploymentService.RemoveDesktopLauncher();
     }
 
     private void RestoreFromTray()
     {
+        ExitBackgroundMode();
         Show();
         WindowState = WindowState.Normal;
         Activate();

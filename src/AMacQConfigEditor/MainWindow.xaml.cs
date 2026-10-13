@@ -174,11 +174,14 @@ public partial class MainWindow : Window, IWeaponQuickSwitchHost
         LoadDefaultFilesIfAvailable();
         _saveResetTimer.Tick += (_, _) => { SaveBtn.Content = "应用"; _saveResetTimer.Stop(); };
         _hotKeyNotificationTimer.Tick += (_, _) => FlushHotKeyNotification();
+        _backgroundTrimTimer.Tick += (_, _) => { _backgroundTrimTimer.Stop(); TrimBackgroundFootprint(); };
+        Loaded += (_, _) => StartBackgroundGlow();
     }
 
     protected override void OnClosed(EventArgs eventArgs)
     {
         _hotKeyNotificationTimer.Stop();
+        _backgroundTrimTimer.Stop();
         UnregisterGlobalHotKeys();
         if (_quickSwitchWindow is not null)
         {

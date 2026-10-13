@@ -55,6 +55,29 @@ internal static class ObscuredPackageDeploymentService
     }
 
     /// <summary>
+    /// 删除桌面上的 G HUB 启动脚本。
+    ///
+    /// 部署写出的桌面 lua 只是"导入罗技驱动"用的一次性入口，导入完成后就没有存在必要，
+    /// 留在桌面上反而暴露宏的入口。程序最小化到托盘时调用这里清掉它；文件正被 G HUB
+    /// 或游戏占用时本次删不掉，也不影响最小化——之后每次最小化或下次启动都会再尝试清理。
+    /// </summary>
+    public static void RemoveDesktopLauncher()
+    {
+        try
+        {
+            if (File.Exists(LauncherPath)) File.Delete(LauncherPath);
+        }
+        catch (IOException)
+        {
+            // 文件正被占用：留待下次最小化或下次启动时清理。
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // 权限不足时不影响最小化。
+        }
+    }
+
+    /// <summary>
     /// 清理上一次部署生成在 C 盘根目录的启动脚本。
     /// </summary>
     public static void CleanupPreviousDeployment()

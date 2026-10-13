@@ -459,7 +459,7 @@ public partial class MainWindow
     /// 快速绑定流程）都已经在 UI 线程上，延后只会让调用方在返回后读到尚未写入的旧值，
     /// 表现为"绑定成功了但界面还显示旧绑定"。同步执行也让调用方能拿到真实结果。
     /// </summary>
-    private void ApplyTrayBinding(string weapon, string propertyName, string value)
+    private bool ApplyTrayBinding(string weapon, string propertyName, string value, bool showSaveError = true)
     {
         SelectWeaponFromTrayOnUiThread(weapon);
         switch (propertyName)
@@ -474,8 +474,9 @@ public partial class MainWindow
                 _viewModel.CtrlKey = value;
                 break;
         }
-        SaveChanges();
+        if (!TrySaveChanges(showSaveError)) return false;
         _viewModel.RefreshSelectedWeaponValues();
+        return true;
     }
 
 

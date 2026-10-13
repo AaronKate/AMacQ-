@@ -22,18 +22,41 @@ namespace AMacQConfigEditor;
 
 public partial class MainWindow
 {
+    /// <summary>确认换枪后等待窗口隐藏再去监听按键的待处理目标。</summary>
+    private (string Weapon, WeaponBindingSlot Slot)? _pendingBindingCapture;
+
     private void ShowQuickSwitchWindow()
     {
-        if (_quickSwitchWindow is not null)
+        // 已在显示中：再次按快捷键只把焦点移回搜索框，保留用户输入的关键词。
+        if (_quickSwitchWindow is { } open && open.IsVisible)
         {
-            _quickSwitchWindow.FocusSearch();
+            open.FocusSearch();
+            return;
+        }
+
+        // 已有缓存实例：复用而不是重建。频繁 Ctrl+Alt+M 时每次重建整棵视觉树
+        // 会让内存"开一次涨一次"，复用后只有第一次打开付出创建成本。
+        if (_quickSwitchWindow is { } cached)
+        {
+            cached.ShowFresh();
             return;
         }
 
         var window = new QuickSwitchWindow(this) { Owner = this };
-        window.Closed += (_, _) => _quickSwitchWindow = null;
+        // 复用实例：窗口隐藏（而非销毁）后字段仍指向它，供下次唤起。
+        // 捕获监听只在隐藏后启动一次，所以这里只挂一次 IsVisibleChanged，读取并清空待处理目标。
+        window.IsVisibleChanged += (_, args) =>
+        {
+            if ((bool)args.NewValue) return; // 只关心"从可见变为隐藏"
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                var pending = _pendingBindingCapture;
+                _pendingBindingCapture = null;
+                if (pending is not null) StartBindingCapture(pending.Value.Weapon, pending.Value.Slot);
+            }));
+        };
         _quickSwitchWindow = window;
-        window.Show();
+        window.ShowFresh();
     }
 
     IReadOnlyList<string> IWeaponQuickSwitchHost.WeaponNames => _viewModel.Weapons;
@@ -50,12 +73,10 @@ public partial class MainWindow
         SelectWeaponFromTrayOnUiThread(weapon);
         SaveChanges();
 
-        // 窗口关闭后开始后台等待按键：这时没有窗口、没有焦点，
+        // 窗口隐藏后开始后台等待按键：这时没有窗口、没有焦点，
         // 用户直接按一下侧键即完成绑定，成功与否用屏幕右上角悬浮提示反馈。
-        if (_quickSwitchWindow is { } window)
-        {
-            window.Closed += (_, _) => Dispatcher.BeginInvoke(new Action(() => StartBindingCapture(weapon, slot)));
-        }
+        // 待处理目标由窗口的 Hidden 回调读取并清空，不逐次订阅事件，避免复用实例时累积。
+        _pendingBindingCapture = (weapon, slot);
     }
 
     string IWeaponQuickSwitchHost.BindingValueFor(string weapon, WeaponBindingSlot slot) =>
@@ -113,9 +134,17 @@ public partial class MainWindow
             BindingWaitingHintDuration);
     }
 
-    private void HandleCapturedBinding(string value, WeaponBindingSlot? liveSlot)
+    private bool HandleCapturedBinding(string value, WeaponBindingSlot? liveSlot)
     {
-        Dispatcher.BeginInvoke(new Action(() => CompleteBindingCapture(value, liveSlot)));
+        // 低层输入钩子安装在本窗口 UI 线程上，正常会直接在这里执行。
+        // 必须在钩子回调返回前完成绑定和落盘，随后原始按键才会继续传给 G HUB；
+        // 如果只排队到 Dispatcher，按键会先穿过钩子链，读到旧配置。
+        if (Dispatcher.CheckAccess())
+        {
+            return CompleteBindingCapture(value, liveSlot);
+        }
+
+        return Dispatcher.Invoke(() => CompleteBindingCapture(value, liveSlot));
     }
 
     /// <summary>
@@ -123,9 +152,9 @@ public partial class MainWindow
     /// 监听器在按键按下那一刻读取修饰键状态得到，因此按住 Alt 点侧键就写 Alt 槽位；
     /// 没有按住修饰键时传 null，用选枪时选定的槽位。
     /// </summary>
-    internal void CompleteBindingCapture(string value, WeaponBindingSlot? liveSlot)
+    internal bool CompleteBindingCapture(string value, WeaponBindingSlot? liveSlot)
     {
-        if (_bindingCaptureTarget is not { } target) return;
+        if (_bindingCaptureTarget is not { } target) return false;
 
         var (weapon, preselectedSlot) = target;
         var slot = liveSlot ?? preselectedSlot;
@@ -136,7 +165,15 @@ public partial class MainWindow
             WeaponBindingSlot.Ctrl => nameof(MainWindowViewModel.CtrlKey),
             _ => nameof(MainWindowViewModel.PrimaryKey)
         };
-        ApplyTrayBinding(weapon, propertyName, value);
+        if (!ApplyTrayBinding(weapon, propertyName, value, showSaveError: false))
+        {
+            CancelBindingCapture();
+            _sensitivityOverlay.ShowMessage(
+                $"{GetWeaponDisplayName(weapon)} 绑定保存失败，按键未触发",
+                BindingFailureColor);
+            return false;
+        }
+
         CancelBindingCapture();
 
         var slotLabel = slot switch
@@ -148,6 +185,7 @@ public partial class MainWindow
         var message = $"{GetWeaponDisplayName(weapon)} · {slotLabel} 已绑定 {DescribeBindingValue(value)}";
         if (conflict is not null) message += $"（{GetWeaponDisplayName(conflict)} 已清空）";
         _sensitivityOverlay.ShowMessage(message, BindingSuccessColor);
+        return true;
     }
 
     private void CancelBindingCapture()
